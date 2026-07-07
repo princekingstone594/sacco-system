@@ -11,20 +11,24 @@ class Member extends Model
     use HasFactory;
 
     protected $fillable = [
-        'member_no',
-        'first_name',
-        'last_name',
-        'national_id',
+        'user_id',
+        'full_name',
+        'id_number',
         'phone',
         'email',
-        'date_of_birth',
         'address',
-        'employer',
+        'is_active',
         'next_of_kin_name',
         'next_of_kin_phone',
         'joined_at',
         'status',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
 
     protected function casts(): array
     {
