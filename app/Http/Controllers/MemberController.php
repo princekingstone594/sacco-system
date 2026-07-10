@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\Member;
+use App\Models\Transaction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -109,5 +110,26 @@ class MemberController extends Controller
             'joined_at' => ['required', 'date'],
             'status' => ['required', Rule::in(['active', 'inactive', 'suspended'])],
         ]);
+    }
+
+    public function wallet(Member $member)
+    {
+        $member->load(['accounts']);
+        
+        $accountIds=$member->accounts->pluck('id');
+
+        $transactions=Transaction::with(['account'])
+              ->whereIn('account_id',$accountIds)
+              ->latest('transacted_at')
+              ->limit(10)
+              ->get();
+
+        $totalBalance = $member->accounts->sum('balance');
+
+        return view('members.wallet', compact(
+            'member',
+            'transactions',
+            'totalBalance'
+        ));
     }
 }

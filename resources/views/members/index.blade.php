@@ -1,50 +1,66 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Members</h2>
-            <a href="{{ route('members.create') }}" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Register Member</a>
-        </div>
+        Members
     </x-slot>
 
-    <div class="py-8">
-        <div class="mx-auto max-w-7xl space-y-4 px-4 sm:px-6 lg:px-8">
-            <form method="GET" class="flex gap-3">
-                <x-text-input name="search" class="w-full sm:max-w-md" placeholder="Search member no, name, phone or ID" value="{{ $search }}" />
-                <x-primary-button>Search</x-primary-button>
-            </form>
+    <div class="mb-4 flex justify-between">
+        <h2 class="text-lg font-semibold">All Members</h2>
 
-            <div class="overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-                        <thead class="bg-gray-50 dark:bg-gray-900">
-                            <tr>
-                                <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Member</th>
-                                <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Contact</th>
-                                <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
-                                <th class="px-5 py-3 text-right text-xs font-semibold uppercase text-gray-500">Account Balance</th>
-                                <th class="px-5 py-3"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                            @forelse ($members as $member)
-                                <tr>
-                                    <td class="px-5 py-4">
-                                        <p class="font-medium text-gray-900 dark:text-white">{{ $member->full_name }}</p>
-                                        <p class="text-sm text-gray-500">{{ $member->member_no }}</p>
-                                    </td>
-                                    <td class="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{{ $member->phone ?? 'No phone' }}<br>{{ $member->email }}</td>
-                                    <td class="px-5 py-4 text-sm capitalize text-gray-700 dark:text-gray-300">{{ $member->status }}</td>
-                                    <td class="px-5 py-4 text-right text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($member->accounts_sum_balance ?? 0, 2) }}</td>
-                                    <td class="px-5 py-4 text-right"><a href="{{ route('members.show', $member) }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-700">Open</a></td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="5" class="px-5 py-8 text-center text-sm text-gray-500">No members found.</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-                <div class="border-t border-gray-100 p-4 dark:border-gray-700">{{ $members->links() }}</div>
-            </div>
+        <a href="{{ route('members.create') }}"
+           class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+            + Add Member
+        </a>
+
+        <a href="{{ route('members.wallet') }}"
+           class="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900">
+            💼 Member Wallet
+        </a>
+    </div>
+
+    @if(session('success'))
+        <div class="mb-4 p-3 bg-green-100 text-green-700 rounded">
+            {{ session('success') }}
         </div>
+    @endif
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 text-gray-600">
+                <tr>
+                    <th class="p-4">Member No</th>
+                    <th class="p-4">Name</th>
+                    <th class="p-4">ID Number</th>
+                    <th class="p-4">Phone</th>
+                    <th class="p-4">Loans</th>
+                    <th class="p-4">Status</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @forelse($members as $member)
+                    <tr class="border-t">
+                        <td class="p-4">{{ $member->member_no }}</td>
+                        <td class="p-4">{{ $member->first_name }} {{ $member->last_name }}</td>
+                        <td class="p-4">{{ $member->id_number }}</td>
+                        <td class="p-4">{{ $member->phone }}</td>
+                        <td class="p-4">KES {{ number_format($member->accounts_sum_balance ?? 0) }}</td>
+                        <td class="p-4"> {{ $member->loans_count }} </td>
+                        <td class="p-4">
+                            @if($member->is_active)
+                                <span class="text-green-600">Active</span>
+                            @else
+                                <span class="text-red-500">Inactive</span>
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="6" class="p-4 text-center text-gray-500">
+                            No members yet
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 </x-app-layout>

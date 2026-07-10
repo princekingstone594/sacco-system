@@ -12,19 +12,26 @@ use Illuminate\View\View;
 
 class TransactionController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $transactions = Transaction::with(['member', 'account', 'postedBy'])
-            ->latest('transacted_at')
-            ->latest()
-            ->paginate(15);
+        $type = $request->get('type');
 
-        return view('transactions.index', compact('transactions'));
+        $transactions = Transaction::with(['member', 'account', 'postedBy'])
+            ->when($type, fn ($q) => $q->where('type', $type))
+            ->latest('transacted_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('transactions.index', compact('transactions', 'type'));
     }
 
     public function create(Request $request): View
     {
-        $accounts = Account::with('member')->where('status', 'active')->orderBy('account_no')->get();
+        $accounts = Account::with('member')
+            ->where('status', 'active')
+            ->orderBy('account_no')
+            ->get();
+
         $selectedAccount = $request->integer('account_id');
 
         return view('transactions.create', [
@@ -46,9 +53,16 @@ class TransactionController extends Controller
         ]);
 
         DB::transaction(function () use ($data, $request) {
-            $account = Account::lockForUpdate()->with('member')->findOrFail($data['account_id']);
+
+            $account = Account::lockForUpdate()
+                ->with('member')
+                ->findOrFail($data['account_id']);
+
             $amount = (float) $data['amount'];
-            $signedAmount = in_array($data['type'], ['withdrawal', 'fee'], true) ? -$amount : $amount;
+
+            $signedAmount = in_array($data['type'], ['withdrawal', 'fee'], true)
+                ? -$amount
+                : $amount;
 
             if ($account->balance + $signedAmount < 0) {
                 abort(422, 'This transaction would overdraw the account.');
@@ -63,6 +77,7 @@ class TransactionController extends Controller
             ]);
         });
 
-        return redirect()->route('transactions.index')->with('success', 'Transaction posted.');
+        return redirect()->route('transactions.index')
+            ->with('success', 'Transaction posted successfully.');
     }
 }

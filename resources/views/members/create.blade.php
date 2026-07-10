@@ -1,17 +1,66 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Register Member</h2>
+        Add Member
     </x-slot>
 
-    <div class="py-8">
-        <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-            <form method="POST" action="{{ route('members.store') }}" class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                @include('members._form')
-                <div class="mt-6 flex justify-end gap-3">
-                    <a href="{{ route('members.index') }}" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700">Cancel</a>
-                    <x-primary-button>Save Member</x-primary-button>
+    <div class="max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-sm">
+
+        <form method="POST" action="{{ route('members.store') }}" class="space-y-4">
+            @csrf
+
+            <div class="grid grid-cols-2 gap-4">
+
+                <div>
+                    <label class="text-sm">Member No</label>
+                    <input type="text" name="member_no" class="w-full mt-1 rounded-lg border-gray-300">
                 </div>
-            </form>
-        </div>
+
+                <div>
+                    <label class="text-sm">Join Date</label>
+                    <input type="date" name="joined_at" class="w-full mt-1 rounded-lg border-gray-300">
+                </div>
+
+                <div>
+                    <label class="text-sm">First Name</label>
+                    <input type="text" name="first_name" class="w-full mt-1 rounded-lg border-gray-300">
+                </div>
+
+                <div>
+                    <label class="text-sm">Last Name</label>
+                    <input type="text" name="last_name" class="w-full mt-1 rounded-lg border-gray-300">
+                </div>
+
+                <div>
+                    <label class="text-sm">National ID</label>
+                    <input type="text" name="national_id" class="w-full mt-1 rounded-lg border-gray-300">
+                </div>
+
+                <div>
+                    <label class="text-sm">Phone</label>
+                    <input type="text" name="phone" class="w-full mt-1 rounded-lg border-gray-300">
+                </div>
+
+                <div class="col-span-2">
+                    <label class="text-sm">Email</label>
+                    <input type="email" name="email" class="w-full mt-1 rounded-lg border-gray-300">
+                </div>
+
+                <div class="col-span-2">
+                    <label class="text-sm">Status</label>
+                    <select name="status" class="w-full mt-1 rounded-lg border-gray-300">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="suspended">Suspended</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <button type="submit"
+                class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">
+                Save Member
+            </button>
+        </form>
+
     </div>
 </x-app-layout>

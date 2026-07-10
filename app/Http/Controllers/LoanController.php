@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Loan;
 use App\Models\LoanProduct;
 use App\Models\Member;
+use App\Models\Transaction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -19,8 +20,7 @@ class LoanController extends Controller
         $status = $request->string('status')->toString();
 
         $loans = Loan::with(['member', 'product'])
-            ->when($status, fn ($query) => $query->where('status', $status))
-            ->latest('issued_on')
+            ->when($status, fn ($q) => $q->where('status', $status))
             ->latest()
             ->paginate(12)
             ->withQueryString();
@@ -33,10 +33,19 @@ class LoanController extends Controller
         return view('loans.create', [
             'members' => Member::where('status', 'active')->orderBy('first_name')->get(),
             'products' => LoanProduct::where('status', 'active')->orderBy('name')->get(),
-            'loan' => new Loan(['issued_on' => now(), 'status' => 'active']),
+            'loan' => new Loan([
+                'issued_on' => now(),
+                'status' => 'pending', // 🔥 default now pending
+            ]),
         ]);
     }
 
+    /**
+     * STORE (CORE LOGIC)
+     * Handles BOTH:
+     * - Member applies → pending
+     * - Admin creates → approved
+     */
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
@@ -44,16 +53,30 @@ class LoanController extends Controller
         $product = LoanProduct::findOrFail($data['loan_product_id']);
         $principal = (float) $data['principal'];
 
-        if ($principal < (float) $product->minimum_amount || ($product->maximum_amount && $principal > (float) $product->maximum_amount)) {
-            return back()->withErrors(['principal' => 'Amount must be within the selected product limits.'])->withInput();
+        // Validate limits
+        if (
+            $principal < (float) $product->minimum_amount ||
+            ($product->maximum_amount && $principal > (float) $product->maximum_amount)
+        ) {
+            return back()
+                ->withErrors(['principal' => 'Amount must be within product limits'])
+                ->withInput();
         }
 
         $issuedOn = Carbon::parse($data['issued_on']);
-        $interest = $principal * ((float) $product->interest_rate / 100);
+
+        // Simple interest calc
+        $interest = $principal * ($product->interest_rate / 100);
         $totalPayable = $principal + $interest;
+
+        // 🔥 KEY LOGIC: WHO IS CREATING?
+        $status = auth()->user()->role === 'admin'
+            ? 'approved'
+            : 'pending';
 
         Loan::create([
             ...$data,
+            'status' => $status,
             'interest_rate' => $product->interest_rate,
             'term_months' => $product->term_months,
             'total_payable' => $totalPayable,
@@ -61,13 +84,16 @@ class LoanController extends Controller
             'due_on' => $issuedOn->copy()->addMonths($product->term_months),
         ]);
 
-        return redirect()->route('loans.index')->with('success', 'Loan issued.');
+        return redirect()
+            ->route('loans.index')
+            ->with('success', $status === 'pending'
+                ? 'Loan application submitted'
+                : 'Loan created and approved');
     }
 
     public function show(Loan $loan): View
     {
         $loan->load(['member', 'product', 'repayments.postedBy']);
-
         return view('loans.show', compact('loan'));
     }
 
@@ -84,7 +110,7 @@ class LoanController extends Controller
     {
         $loan->update($request->validate([
             'loan_no' => ['required', 'string', 'max:50', Rule::unique('loans')->ignore($loan->id)],
-            'status' => ['required', Rule::in(['active', 'paid', 'defaulted', 'written_off'])],
+            'status' => ['required', Rule::in(['pending','approved','disbursed','completed','rejected'])],
             'purpose' => ['nullable', 'string', 'max:1000'],
         ]));
 
@@ -94,12 +120,18 @@ class LoanController extends Controller
     public function destroy(Loan $loan): RedirectResponse
     {
         $loan->delete();
-
         return redirect()->route('loans.index')->with('success', 'Loan removed.');
     }
 
+    /**
+     * REPAYMENT
+     */
     public function repay(Request $request, Loan $loan): RedirectResponse
     {
+        if ($loan->status !== 'disbursed') {
+            return back()->with('error', 'Loan must be disbursed first');
+        }
+
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:1'],
             'reference' => ['nullable', 'string', 'max:120'],
@@ -109,7 +141,8 @@ class LoanController extends Controller
 
         DB::transaction(function () use ($loan, $data, $request) {
             $loan = Loan::lockForUpdate()->findOrFail($loan->id);
-            $amount = min((float) $data['amount'], (float) $loan->balance);
+
+            $amount = min($data['amount'], $loan->balance);
 
             $loan->repayments()->create([
                 ...$data,
@@ -120,14 +153,84 @@ class LoanController extends Controller
             $loan->decrement('balance', $amount);
             $loan->refresh();
 
-            if ((float) $loan->balance <= 0) {
-                $loan->update(['status' => 'paid', 'balance' => 0]);
+            if ($loan->balance <= 0) {
+                $loan->update([
+                    'status' => 'completed',
+                    'balance' => 0
+                ]);
             }
         });
 
-        return redirect()->route('loans.show', $loan)->with('success', 'Repayment recorded.');
+        return back()->with('success', 'Repayment recorded.');
     }
 
+    /**
+     * APPROVE
+     */
+    public function approve(Loan $loan)
+    {
+        if ($loan->status !== 'pending') {
+            return back()->with('error', 'Only pending loans can be approved');
+        }
+
+        $loan->update(['status' => 'approved']);
+
+        return back()->with('success', 'Loan approved');
+    }
+
+    /**
+     * REJECT
+     */
+    public function reject(Loan $loan)
+    {
+        if ($loan->status !== 'pending') {
+            return back()->with('error', 'Only pending loans can be rejected');
+        }
+
+        $loan->update(['status' => 'rejected']);
+
+        return back()->with('error', 'Loan rejected');
+    }
+
+    /**
+     * DISBURSE (CRITICAL FIXED)
+     */
+    public function disburse(Loan $loan)
+    {
+        if ($loan->status !== 'approved') {
+            return back()->with('error', 'Loan must be approved first');
+        }
+
+        $account = $loan->member->accounts()->first();
+
+        if (!$account) {
+            return back()->with('error', 'Member has no account');
+        }
+
+        DB::transaction(function () use ($loan, $account) {
+
+            // ✅ FIXED (was amount ❌)
+            $account->increment('balance', $loan->principal);
+
+            Transaction::create([
+                'member_id' => $loan->member_id,
+                'account_id' => $account->id,
+                'type' => 'loan_disbursement',
+                'amount' => $loan->principal,
+                'transacted_at' => now(),
+            ]);
+
+            $loan->update([
+                'status' => 'disbursed'
+            ]);
+        });
+
+        return back()->with('success', 'Loan disbursed successfully');
+    }
+
+    /**
+     * VALIDATION
+     */
     private function validated(Request $request): array
     {
         return $request->validate([
@@ -136,7 +239,6 @@ class LoanController extends Controller
             'loan_no' => ['required', 'string', 'max:50', 'unique:loans,loan_no'],
             'principal' => ['required', 'numeric', 'min:1'],
             'issued_on' => ['required', 'date'],
-            'status' => ['required', Rule::in(['active', 'paid', 'defaulted', 'written_off'])],
             'purpose' => ['nullable', 'string', 'max:1000'],
         ]);
     }
