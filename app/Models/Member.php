@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Member extends Model
 {
@@ -12,7 +13,8 @@ class Member extends Model
 
     protected $fillable = [
         'user_id',
-        'full_name',
+        'first_name',
+        'last_name',
         'id_number',
         'phone',
         'email',
@@ -24,35 +26,49 @@ class Member extends Model
         'status',
     ];
 
-    public function user()
+    protected function casts(): array
+    {
+        return [
+            'joined_at' => 'date',
+            'is_active' => 'boolean',
+        ];
+    }
+
+    /**
+     * Member belongs to a user
+     */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-
-    protected function casts(): array
-    {
-        return [
-            'date_of_birth' => 'date',
-            'joined_at' => 'date',
-        ];
-    }
-
+    /**
+     * Wallet accounts (Savings, Shares, etc.)
+     */
     public function accounts(): HasMany
     {
         return $this->hasMany(Account::class);
     }
 
+    /**
+     * All transactions
+     */
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
     }
 
+    /**
+     * Loans
+     */
     public function loans(): HasMany
     {
         return $this->hasMany(Loan::class);
     }
 
+    /**
+     * Accessor: Full Name
+     */
     public function getFullNameAttribute(): string
     {
         return trim("{$this->first_name} {$this->last_name}");

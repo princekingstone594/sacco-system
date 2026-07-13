@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Models\Member;
-use Illuminate\Http\Request;
 
 use App\Http\Controllers\{
     AccountController,
@@ -27,11 +25,16 @@ Route::get('/', fn () => redirect()->route('dashboard'));
 
 /*
 |--------------------------------------------------------------------------
-| DASHBOARD
+| AUTHENTICATED ROUTES
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
 
+    /*
+    |--------------------------------------------------------------------------
+    | DASHBOARD SWITCH (ADMIN / USER)
+    |--------------------------------------------------------------------------
+    */
     Route::get('/dashboard', function () {
 
         if (auth()->user()->is_admin) {
@@ -45,44 +48,41 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | USER FEATURES
+    | WALLET
     |--------------------------------------------------------------------------
     */
-
-    // WALLET (NEW 🔥)
     Route::get('/wallet', [DashboardController::class, 'wallet'])
         ->name('wallet');
 
 
-    // TRANSACTIONS
+    /*
+    |--------------------------------------------------------------------------
+    | TRANSACTIONS (Deposits, Withdrawals)
+    |--------------------------------------------------------------------------
+    */
     Route::resource('transactions', TransactionController::class)
         ->only(['index', 'create', 'store']);
 
 
-    // SAVINGS
-    Route::get('/savings/create', function () {
-        return view('savings.create', [
-            'members' => Member::all()
-        ]);
-    })->name('savings.create');
+    /*
+    |--------------------------------------------------------------------------
+    | SAVINGS (Handled via Transactions)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/savings/create', [TransactionController::class, 'createSavings'])
+        ->name('savings.create');
 
-    Route::post('/savings', function (Request $request) {
+    Route::post('/savings', [TransactionController::class, 'storeSavings'])
+        ->name('savings.store');
 
-        $request->validate([
-            'member_id' => 'required|exists:members,id',
-            'amount' => 'required|numeric|min:1',
-        ]);
 
-        \App\Models\Account::create([
-            'member_id' => $request->member_id,
-            'type' => 'savings',
-            'balance' => $request->amount,
-        ]);
-
-        return redirect()->route('wallet')
-            ->with('success', 'Savings added successfully');
-
-    })->name('savings.store');
+    /*
+    |--------------------------------------------------------------------------
+    | USER LOANS (VIEW ONLY)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/my-loans', [LoanController::class, 'myLoans'])
+        ->name('loans.my');
 
 
     /*
@@ -93,7 +93,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
 });
 
 
@@ -106,22 +105,50 @@ Route::prefix('admin')
     ->middleware(['auth', 'admin'])
     ->group(function () {
 
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN DASHBOARD
+        |--------------------------------------------------------------------------
+        */
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])
             ->name('admin.dashboard');
 
-        // MEMBERS (ADMIN ONLY)
+
+        /*
+        |--------------------------------------------------------------------------
+        | MEMBERS MANAGEMENT
+        |--------------------------------------------------------------------------
+        */
         Route::resource('members', MemberController::class);
 
-        // LOANS (FULL CONTROL)
+
+        /*
+        |--------------------------------------------------------------------------
+        | LOANS MANAGEMENT
+        |--------------------------------------------------------------------------
+        */
         Route::resource('loans', LoanController::class);
 
-        Route::post('loans/{loan}/approve', [LoanController::class, 'approve'])->name('loans.approve');
-        Route::post('loans/{loan}/reject', [LoanController::class, 'reject'])->name('loans.reject');
-        Route::post('loans/{loan}/disburse', [LoanController::class, 'disburse'])->name('loans.disburse');
-        Route::post('loans/{loan}/repayments', [LoanController::class, 'repay'])->name('loans.repayments.store');
+        Route::post('loans/{loan}/approve', [LoanController::class, 'approve'])
+            ->name('loans.approve');
 
-        // LOAN PRODUCTS
-        Route::resource('loan-products', LoanProductController::class)->except(['show']);
+        Route::post('loans/{loan}/reject', [LoanController::class, 'reject'])
+            ->name('loans.reject');
+
+        Route::post('loans/{loan}/disburse', [LoanController::class, 'disburse'])
+            ->name('loans.disburse');
+
+        Route::post('loans/{loan}/repayments', [LoanController::class, 'repay'])
+            ->name('loans.repayments.store');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | LOAN PRODUCTS
+        |--------------------------------------------------------------------------
+        */
+        Route::resource('loan-products', LoanProductController::class)
+            ->except(['show']);
     });
 
 
