@@ -12,6 +12,11 @@ use Illuminate\View\View;
 
 class TransactionController extends Controller
 {
+    /*
+    |--------------------------------------------------------------------------
+    | LIST TRANSACTIONS
+    |--------------------------------------------------------------------------
+    */
     public function index(Request $request): View
     {
         $type = $request->get('type');
@@ -25,6 +30,12 @@ class TransactionController extends Controller
         return view('transactions.index', compact('transactions', 'type'));
     }
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | CREATE GENERAL TRANSACTION (ADMIN STYLE)
+    |--------------------------------------------------------------------------
+    */
     public function create(Request $request): View
     {
         $accounts = Account::with('member')
@@ -41,6 +52,12 @@ class TransactionController extends Controller
         ]);
     }
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | STORE GENERAL TRANSACTION (DEPOSIT / WITHDRAW / FEE)
+    |--------------------------------------------------------------------------
+    */
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -60,16 +77,20 @@ class TransactionController extends Controller
 
             $amount = (float) $data['amount'];
 
+            // Determine direction
             $signedAmount = in_array($data['type'], ['withdrawal', 'fee'], true)
                 ? -$amount
                 : $amount;
 
+            // Prevent overdraft
             if ($account->balance + $signedAmount < 0) {
                 abort(422, 'This transaction would overdraw the account.');
             }
 
+            // Update balance
             $account->increment('balance', $signedAmount);
 
+            // Save transaction
             Transaction::create([
                 ...$data,
                 'member_id' => $account->member_id,
@@ -79,5 +100,71 @@ class TransactionController extends Controller
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaction posted successfully.');
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | WALLET: SIMPLE DEPOSIT FORM (USER)
+    |--------------------------------------------------------------------------
+    */
+    public function createSavings(): View
+    {
+        $member = auth()->user()->member;
+
+        return view('savings.create', compact('member'));
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | WALLET: STORE DEPOSIT (USER FRIENDLY)
+    |--------------------------------------------------------------------------
+    */
+    public function storeSavings(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'amount' => ['required', 'numeric', 'min:1'],
+        ]);
+
+        $member = auth()->user()->member;
+
+        if (!$member) {
+            return back()->with('error', 'Member profile not found.');
+        }
+
+        DB::transaction(function () use ($member, $request) {
+
+            // 🔥 Find or create savings account
+            $account = Account::firstOrCreate(
+                [
+                    'member_id' => $member->id,
+                    'type' => 'savings',
+                ],
+                [
+                    'balance' => 0,
+                    'status' => 'active',
+                ]
+            );
+
+            $amount = (float) $request->amount;
+
+            // Update balance
+            $account->increment('balance', $amount);
+
+            // Record transaction (standardized)
+            Transaction::create([
+                'account_id' => $account->id,
+                'member_id' => $member->id,
+                'type' => 'deposit',
+                'amount' => $amount,
+                'transacted_at' => now(),
+                'posted_by' => auth()->id(),
+                'description' => 'Wallet deposit',
+            ]);
+        });
+
+        return redirect()->route('wallet')
+            ->with('success', 'Deposit successful.');
     }
 }

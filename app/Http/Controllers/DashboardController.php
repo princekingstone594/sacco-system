@@ -58,40 +58,40 @@ class DashboardController extends Controller
     }
 
     public function wallet()
-    {
-        $user = auth()->user();
+  {
+    $user = auth()->user();
 
-        // If you link users to members
-        $member = $user->member ?? null;
+    // If you link users to members
+    $member = $user->member ?? null;
 
-        if (!member) {
-            return view('dashboard.wallet', [
-                'balance' => 0,
-                'savings' => 0,
-                'loans' => collect(),
-                'transactions' => collect(),
-            ]);
-        }
-
-        //Total Savings (accounts)
-        $savings = $member->accounts()->sum('balance');
-
-        //Active Loans
-        $loans = $member->loans()->latest()->get();
-
-        // Transactions
-        $transactions = $member->transactions()->latest()->take(5)->get();
-
-        // Wallet Balance (Savings - Loan Balance if needed)
-        $loanBalance = $loans->where('status', 'approved')->sum('amount');
-
-        $balance = $savings + $loanBalance;
-
-        return view('dashboard.wallet', compact(
-            'balance',
-            'savings',
-            'loans',
-            'transactions'
-        ));
+    if (!$member) { // ✅ FIXED
+        return view('dashboard.wallet', [
+            'balance' => 0,
+            'savings' => 0,
+            'loans' => collect(),
+            'transactions' => collect(),
+        ]);
     }
+
+    // Total Savings (accounts)
+    $savings = $member->accounts()->sum('balance');
+
+    // Active Loans
+    $loans = $member->loans()->latest()->get();
+
+    // Transactions
+    $transactions = $member->transactions()->latest()->take(5)->get();
+
+    // Wallet Balance
+    $loanBalance = $loans->where('status', 'approved')->sum('amount');
+
+    $balance = $savings + $loanBalance;
+
+    return view('dashboard.wallet', compact(
+        'balance',
+        'savings',
+        'loans',
+        'transactions'
+    ));
+  }
 }

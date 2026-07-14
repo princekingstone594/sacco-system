@@ -1,36 +1,27 @@
-{{-- resources/views/savings/create.blade.php --}}
+<x-app-layout>
 
-@extends('layouts.app')
+    <x-slot name="header">
+        Deposit Money
+    </x-slot>
 
-@section('content')
-<div class="container">
-    <h2>Create Savings Account</h2>
+    <div class="bg-white p-6 rounded-xl shadow max-w-lg">
 
-    <form action="{{ route('savings.store') }}" method="POST">
-        @csrf
+        <form method="POST" action="{{ route('savings.store') }}">
+            @csrf
 
-        {{-- Member --}}
-        <div class="mb-3">
-            <label for="member_id" class="form-label">Member</label>
-            <select name="member_id" class="form-control" required>
-                <option value="">Select Member</option>
-                @foreach($members as $member)
-                    <option value="{{ $member->id }}">
-                        {{ $member->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
+            <div class="mb-4">
+                <label class="block text-sm mb-1">Amount</label>
+                <input type="number" name="amount" step="0.01"
+                       class="w-full border rounded-lg px-3 py-2"
+                       required>
+            </div>
 
-        {{-- Initial Deposit --}}
-        <div class="mb-3">
-            <label for="amount" class="form-label">Initial Deposit</label>
-            <input type="number" name="amount" class="form-control" required>
-        </div>
+            <button class="bg-indigo-600 text-white px-4 py-2 rounded-lg">
+                Deposit
+            </button>
 
-        <button type="submit" class="btn btn-primary">
-            Create Savings
-        </button>
-    </form>
-</div>
-@endsection
+        </form>
+
+    </div>
+
+</x-app-layout>

@@ -34,7 +34,7 @@ class User extends Authenticatable
     /**
      * One user = one member profile
      */
-    public function member(): HasOne
+    public function member()
     {
         return $this->hasOne(Member::class);
     }
