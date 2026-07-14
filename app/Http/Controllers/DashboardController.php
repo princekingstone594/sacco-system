@@ -58,40 +58,52 @@ class DashboardController extends Controller
     }
 
     public function wallet()
-  {
+   {
     $user = auth()->user();
-
-    // If you link users to members
     $member = $user->member ?? null;
 
-    if (!$member) { // ✅ FIXED
+    if (!$member) {
         return view('dashboard.wallet', [
             'balance' => 0,
             'savings' => 0,
             'loans' => collect(),
             'transactions' => collect(),
+            'income' => 0,
+            'expense' => 0,
         ]);
     }
 
-    // Total Savings (accounts)
+    // Savings
     $savings = $member->accounts()->sum('balance');
 
-    // Active Loans
+    // Loans
     $loans = $member->loans()->latest()->get();
 
     // Transactions
-    $transactions = $member->transactions()->latest()->take(5)->get();
+    $transactions = $member->transactions()->latest()->take(10)->get();
 
-    // Wallet Balance
+    // Loan balance (approved only)
     $loanBalance = $loans->where('status', 'approved')->sum('amount');
 
+    // Total balance
     $balance = $savings + $loanBalance;
+
+    // Chart data
+    $income = $member->transactions()
+        ->where('type', 'deposit')
+        ->sum('amount');
+
+    $expense = $member->transactions()
+        ->where('type', 'withdrawal')
+        ->sum('amount');
 
     return view('dashboard.wallet', compact(
         'balance',
         'savings',
         'loans',
-        'transactions'
+        'transactions',
+        'income',
+        'expense'
     ));
-  }
+   }
 }

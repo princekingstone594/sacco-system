@@ -54,6 +54,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/wallet', [DashboardController::class, 'wallet'])
         ->name('wallet');
 
+    Route::post('/wallet/deposit', [TransactionController::class, 'deposit'])->name('wallet.deposit');
+    Route::post('/wallet/withdraw', [TransactionController::class, 'withdraw'])->name('wallet.withdraw');
+
 
     /*
     |--------------------------------------------------------------------------

@@ -167,4 +167,79 @@ class TransactionController extends Controller
         return redirect()->route('wallet')
             ->with('success', 'Deposit successful.');
     }
+
+    public function deposit(Request $request)
+    {
+      $data = $request->validate([
+        'amount' => ['required', 'numeric', 'min:1'],
+      ]);
+
+      return DB::transaction(function () use ($data, $request) {
+
+        $member = $request->user()->member;
+
+        $account = $member->accounts()->lockForUpdate()->first();
+
+        if (!$account) {
+            return response()->json(['message' => 'No account found'], 404);
+        }
+
+        $account->increment('balance', $data['amount']);
+
+        Transaction::create([
+            'member_id' => $member->id,
+            'account_id' => $account->id,
+            'type' => 'deposit',
+            'amount' => $data['amount'],
+            'transacted_at' => now(),
+            'posted_by' => $request->user()->id,
+        ]);
+
+        return response()->json([
+            'message' => 'Deposit successful',
+            'balance' => $account->balance
+        ]);
+    });
+    }
+
+
+    public function withdraw(Request $request)
+    {
+       $data = $request->validate([
+        'amount' => ['required', 'numeric', 'min:1'],
+        ]);
+
+        return DB::transaction(function () use ($data, $request) {
+
+         $member = $request->user()->member;
+
+         $account = $member->accounts()->lockForUpdate()->first();
+
+         if (!$account) {
+            return response()->json(['message' => 'No account found'], 404);
+         }
+
+         if ($account->balance < $data['amount']) {
+            return response()->json([
+                'message' => 'Insufficient balance'
+            ], 422);
+         }
+
+         $account->decrement('balance', $data['amount']);
+
+         Transaction::create([
+            'member_id' => $member->id,
+            'account_id' => $account->id,
+            'type' => 'withdrawal',
+            'amount' => $data['amount'],
+            'transacted_at' => now(),
+            'posted_by' => $request->user()->id,
+         ]);
+
+         return response()->json([
+            'message' => 'Withdrawal successful',
+            'balance' => $account->balance
+         ]);
+        });
+    }
 }

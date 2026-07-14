@@ -1,70 +1,125 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="text-xl font-semibold">Transactions</h2>
+        <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold text-white">Transactions</h2>
 
             <a href="{{ route('transactions.create') }}"
-               class="bg-indigo-600 text-white px-4 py-2 rounded-lg">
-                Post Transaction
+               class="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm shadow hover:opacity-90 transition">
+                + New Transaction
             </a>
         </div>
     </x-slot>
 
-    <div class="space-y-4">
+    <div class="p-6 space-y-6">
 
-        <!-- FILTER -->
-        <form method="GET" class="flex gap-2">
-            <select name="type" class="rounded-md border-gray-300">
-                <option value="">All Types</option>
-                <option value="deposit" @selected(request('type')=='deposit')>Deposits</option>
-                <option value="withdrawal" @selected(request('type')=='withdrawal')>Withdrawals</option>
-                <option value="fee" @selected(request('type')=='fee')>Fees</option>
-            </select>
+        <!-- FILTER BAR -->
+        <div class="bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-4">
+            <form method="GET" class="flex flex-wrap gap-3">
 
-            <button class="bg-gray-800 text-white px-3 py-1 rounded">
-                Filter
-            </button>
-        </form>
+                <select name="type"
+                    class="bg-white/10 border border-white/20 text-white rounded-xl px-3 py-2 text-sm">
+                    <option value="">All Types</option>
+                    <option value="deposit" @selected(request('type') == 'deposit')>Deposit</option>
+                    <option value="withdrawal" @selected(request('type') == 'withdrawal')>Withdraw</option>
+                    <option value="loan" @selected(request('type') == 'loan')>Loan</option>
+                </select>
 
-        <!-- TABLE -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <select name="date"
+                    class="bg-white/10 border border-white/20 text-white rounded-xl px-3 py-2 text-sm">
+                    <option value="">Any Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                </select>
 
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50">
+                <button class="px-4 py-2 bg-indigo-500 rounded-xl text-white text-sm">
+                    Filter
+                </button>
+            </form>
+        </div>
+
+        <!-- TRANSACTIONS TABLE -->
+        <div class="bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+
+            <table class="w-full text-sm text-left text-white">
+
+                <!-- HEADER -->
+                <thead class="bg-white/5 text-gray-300 text-xs uppercase">
                     <tr>
-                        <th class="p-4 text-left">Date</th>
-                        <th class="p-4 text-left">Member</th>
-                        <th class="p-4 text-left">Account</th>
-                        <th class="p-4 text-left">Type</th>
-                        <th class="p-4 text-right">Amount</th>
+                        <th class="p-4">Reference</th>
+                        <th class="p-4">Member</th>
+                        <th class="p-4">Type</th>
+                        <th class="p-4">Amount</th>
+                        <th class="p-4">Date</th>
+                        <th class="p-4 text-right">Action</th>
                     </tr>
                 </thead>
 
-                <tbody>
-                    @forelse ($transactions as $transaction)
-                        <tr class="border-t">
-                            <td class="p-4">{{ $transaction->transacted_at->format('M d, Y') }}</td>
-                            <td class="p-4">{{ $transaction->member->full_name }}</td>
-                            <td class="p-4">{{ $transaction->account->account_no }}</td>
-                            <td class="p-4">{{ $transaction->type_label }}</td>
-                            <td class="p-4 text-right font-semibold
-                                {{ $transaction->isDebit() ? 'text-red-600' : 'text-green-600' }}">
-                                {{ $transaction->isDebit() ? '-' : '+' }}
-                                {{ number_format($transaction->amount, 2) }}
+                <!-- BODY -->
+                <tbody class="divide-y divide-white/10">
+
+                    @forelse($transactions as $tx)
+                        <tr class="hover:bg-white/5 transition">
+
+                            <!-- REF -->
+                            <td class="p-4 font-medium">
+                                {{ $tx->reference ?? 'TXN-' . $tx->id }}
                             </td>
+
+                            <!-- MEMBER -->
+                            <td class="p-4 text-gray-300">
+                                {{ $tx->member->full_name ?? 'N/A' }}
+                            </td>
+
+                            <!-- TYPE -->
+                            <td class="p-4">
+                                @if($tx->type === 'deposit')
+                                    <span class="px-3 py-1 rounded-full text-xs bg-green-500/20 text-green-400">
+                                        Deposit
+                                    </span>
+                                @elseif($tx->type === 'withdrawal')
+                                    <span class="px-3 py-1 rounded-full text-xs bg-red-500/20 text-red-400">
+                                        Withdraw
+                                    </span>
+                                @elseif($tx->type === 'loan')
+                                    <span class="px-3 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400">
+                                        Loan
+                                    </span>
+                                @endif
+                            </td>
+
+                            <!-- AMOUNT -->
+                            <td class="p-4 font-semibold">
+                                KES {{ number_format($tx->amount, 2) }}
+                            </td>
+
+                            <!-- DATE -->
+                            <td class="p-4 text-gray-400">
+                                {{ optional($tx->transacted_at)->format('M d, Y H:i') }}
+                            </td>
+
+                            <!-- ACTION -->
+                            <td class="p-4 text-right">
+                                <a href="{{ route('transactions.show', $tx) }}"
+                                   class="text-indigo-400 hover:underline text-sm">
+                                    View
+                                </a>
+                            </td>
+
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="p-6 text-center text-gray-500">
+                            <td colspan="6" class="p-6 text-center text-gray-400">
                                 No transactions found
                             </td>
                         </tr>
                     @endforelse
-                </tbody>
 
+                </tbody>
             </table>
 
-            <div class="p-4 border-t">
+            <!-- PAGINATION -->
+            <div class="p-4 border-t border-white/10">
                 {{ $transactions->links() }}
             </div>
 
