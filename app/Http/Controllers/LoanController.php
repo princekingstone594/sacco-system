@@ -15,6 +15,11 @@ use Illuminate\View\View;
 
 class LoanController extends Controller
 {
+    /**
+     * =========================
+     * ADMIN: ALL LOANS
+     * =========================
+     */
     public function index(Request $request): View
     {
         $status = $request->string('status')->toString();
@@ -28,6 +33,22 @@ class LoanController extends Controller
         return view('loans.index', compact('loans', 'status'));
     }
 
+    /**
+     * =========================
+     * USER: MY LOANS
+     * =========================
+     */
+    public function myLoans(): View
+    {
+        $member = auth()->user()->member;
+
+        $loans = $member
+            ? $member->loans()->with('product')->latest()->get()
+            : collect();
+
+        return view('loans.my', compact('loans'));
+    }
+
     public function create(): View
     {
         return view('loans.create', [
@@ -35,16 +56,13 @@ class LoanController extends Controller
             'products' => LoanProduct::where('status', 'active')->orderBy('name')->get(),
             'loan' => new Loan([
                 'issued_on' => now(),
-                'status' => 'pending', // 🔥 default now pending
+                'status' => 'pending',
             ]),
         ]);
     }
 
     /**
-     * STORE (CORE LOGIC)
-     * Handles BOTH:
-     * - Member applies → pending
-     * - Admin creates → approved
+     * STORE (ADMIN + USER)
      */
     public function store(Request $request): RedirectResponse
     {
@@ -53,7 +71,6 @@ class LoanController extends Controller
         $product = LoanProduct::findOrFail($data['loan_product_id']);
         $principal = (float) $data['principal'];
 
-        // Validate limits
         if (
             $principal < (float) $product->minimum_amount ||
             ($product->maximum_amount && $principal > (float) $product->maximum_amount)
@@ -65,14 +82,12 @@ class LoanController extends Controller
 
         $issuedOn = Carbon::parse($data['issued_on']);
 
-        // Simple interest calc
         $interest = $principal * ($product->interest_rate / 100);
         $totalPayable = $principal + $interest;
 
-        // 🔥 KEY LOGIC: WHO IS CREATING?
-        $status = auth()->user()->role === 'admin'
-            ? 'approved'
-            : 'pending';
+        $isAdmin = auth()->user()->is_admin;
+
+        $status = $isAdmin ? 'approved' : 'pending';
 
         Loan::create([
             ...$data,
@@ -84,11 +99,13 @@ class LoanController extends Controller
             'due_on' => $issuedOn->copy()->addMonths($product->term_months),
         ]);
 
-        return redirect()
-            ->route('loans.index')
-            ->with('success', $status === 'pending'
+        return redirect()->route(
+            $isAdmin ? 'admin.loans.index' : 'loans.my'
+        )->with('success',
+            $status === 'pending'
                 ? 'Loan application submitted'
-                : 'Loan created and approved');
+                : 'Loan created and approved'
+        );
     }
 
     public function show(Loan $loan): View
@@ -114,13 +131,20 @@ class LoanController extends Controller
             'purpose' => ['nullable', 'string', 'max:1000'],
         ]));
 
-        return redirect()->route('loans.show', $loan)->with('success', 'Loan updated.');
+        $isAdmin = auth()->user()->is_admin;
+
+        return redirect()->route(
+            $isAdmin ? 'admin.loans.show' : 'loans.my',
+            $isAdmin ? $loan : []
+        )->with('success', 'Loan updated.');
     }
 
     public function destroy(Loan $loan): RedirectResponse
     {
         $loan->delete();
-        return redirect()->route('loans.index')->with('success', 'Loan removed.');
+
+        return redirect()->route('admin.loans.index')
+            ->with('success', 'Loan removed.');
     }
 
     /**
@@ -164,9 +188,6 @@ class LoanController extends Controller
         return back()->with('success', 'Repayment recorded.');
     }
 
-    /**
-     * APPROVE
-     */
     public function approve(Loan $loan)
     {
         if ($loan->status !== 'pending') {
@@ -178,9 +199,6 @@ class LoanController extends Controller
         return back()->with('success', 'Loan approved');
     }
 
-    /**
-     * REJECT
-     */
     public function reject(Loan $loan)
     {
         if ($loan->status !== 'pending') {
@@ -192,9 +210,6 @@ class LoanController extends Controller
         return back()->with('error', 'Loan rejected');
     }
 
-    /**
-     * DISBURSE (CRITICAL FIXED)
-     */
     public function disburse(Loan $loan)
     {
         if ($loan->status !== 'approved') {
@@ -209,7 +224,6 @@ class LoanController extends Controller
 
         DB::transaction(function () use ($loan, $account) {
 
-            // ✅ FIXED (was amount ❌)
             $account->increment('balance', $loan->principal);
 
             Transaction::create([
@@ -228,9 +242,6 @@ class LoanController extends Controller
         return back()->with('success', 'Loan disbursed successfully');
     }
 
-    /**
-     * VALIDATION
-     */
     private function validated(Request $request): array
     {
         return $request->validate([

@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\{
-    AccountController,
     DashboardController,
     LoanController,
     LoanProductController,
@@ -13,7 +12,6 @@ use App\Http\Controllers\{
 };
 
 use App\Http\Controllers\Admin\AdminDashboardController;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -25,25 +23,18 @@ Route::get('/', fn () => redirect()->route('dashboard'));
 
 /*
 |--------------------------------------------------------------------------
-| AUTHENTICATED ROUTES
+| AUTH ROUTES (MEMBER)
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | DASHBOARD SWITCH (ADMIN / USER)
+    | MEMBER DASHBOARD (ONLY USER DATA)
     |--------------------------------------------------------------------------
     */
-    Route::get('/dashboard', function () {
-
-        if (auth()->user()->is_admin) {
-            return redirect()->route('admin.dashboard');
-        }
-
-        return app(DashboardController::class)->index();
-
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->name('dashboard');
 
 
     /*
@@ -54,13 +45,16 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/wallet', [DashboardController::class, 'wallet'])
         ->name('wallet');
 
-    Route::post('/wallet/deposit', [TransactionController::class, 'deposit'])->name('wallet.deposit');
-    Route::post('/wallet/withdraw', [TransactionController::class, 'withdraw'])->name('wallet.withdraw');
+    Route::post('/wallet/deposit', [TransactionController::class, 'deposit'])
+        ->name('wallet.deposit');
+
+    Route::post('/wallet/withdraw', [TransactionController::class, 'withdraw'])
+        ->name('wallet.withdraw');
 
 
     /*
     |--------------------------------------------------------------------------
-    | TRANSACTIONS (Deposits, Withdrawals)
+    | TRANSACTIONS
     |--------------------------------------------------------------------------
     */
     Route::resource('transactions', TransactionController::class)
@@ -69,7 +63,7 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | SAVINGS (Handled via Transactions)
+    | SAVINGS
     |--------------------------------------------------------------------------
     */
     Route::get('/savings/create', [TransactionController::class, 'createSavings'])
@@ -81,7 +75,7 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | USER LOANS (VIEW ONLY)
+    | USER LOANS (PERSONAL)
     |--------------------------------------------------------------------------
     */
     Route::get('/my-loans', [LoanController::class, 'myLoans'])
@@ -130,7 +124,8 @@ Route::prefix('admin')
         | LOANS MANAGEMENT
         |--------------------------------------------------------------------------
         */
-        Route::resource('loans', LoanController::class);
+        Route::resource('loans', LoanController::class)
+              ->names('admin.loans');
 
         Route::post('loans/{loan}/approve', [LoanController::class, 'approve'])
             ->name('loans.approve');

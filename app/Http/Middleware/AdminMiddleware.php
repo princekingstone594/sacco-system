@@ -16,7 +16,7 @@ class AdminMiddleware
         }
 
         // Not admin
-        if (!auth()->user()->is_admin) {
+        if (!auth()->user() || !auth()->is_admin) {
             abort(403, 'Admins only.');
         }
 
