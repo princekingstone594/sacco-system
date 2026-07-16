@@ -151,6 +151,11 @@ Route::prefix('admin')
         */
         Route::resource('loan-products', LoanProductController::class)
             ->except(['show']);
+            
+        Route::post('/notifications/read', function () {
+            auth()->user()->unreadNotifications->markAsRead();
+            return back();
+        })->name('notifications.read');
     });
 
 

@@ -204,7 +204,15 @@ class LoanController extends Controller
             return back()->with('error', 'Only pending loans can be approved');
         }
 
-        $loan->update(['status' => 'approved']);
+        $loan->update([
+            'status' => 'approved',
+            'approved_at'=> now()
+        ]);
+
+        //🔔 NOTIFY USER
+        $loan->member->user->notify(
+            new LoanApprovedNotification($loan)
+        );
 
         return back()->with('success', 'Loan approved');
     }
