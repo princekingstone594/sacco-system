@@ -1,179 +1,144 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-6">
+<div class="p-6 space-y-6">
 
-    <div class="max-w-5xl mx-auto space-y-6">
-
-        <!-- 🔥 WALLET CARD -->
-        <div class="relative bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 rounded-2xl p-6 shadow-2xl overflow-hidden">
-
-            <div class="absolute top-0 right-0 opacity-20 text-9xl font-bold pr-6 pt-2">
-                ₱
-            </div>
-
-            <p class="text-sm opacity-80">Total Balance</p>
-            <h1 class="text-4xl font-bold mt-1">₱{{ number_format($balance, 2) }}</h1>
-
-            <div class="flex gap-6 mt-4 text-sm">
-                <div>
-                    <p class="opacity-70">Savings</p>
-                    <p class="font-semibold">₱{{ number_format($savings, 2) }}</p>
-                </div>
-                <div>
-                    <p class="opacity-70">Loan Balance</p>
-                    <p class="font-semibold">
-                        ₱{{ number_format($loans->where('status','approved')->sum('amount'),2) }}
-                    </p>
-                </div>
-            </div>
-
-            <!-- ACTION BUTTONS -->
-            <div class="flex gap-3 mt-6">
-                <button onclick="openModal('depositModal')" 
-                    class="bg-white text-black px-4 py-2 rounded-lg font-semibold hover:scale-105 transition">
-                    + Deposit
-                </button>
-
-                <button onclick="openModal('withdrawModal')" 
-                    class="bg-black/30 border border-white px-4 py-2 rounded-lg hover:bg-black/50 transition">
-                    − Withdraw
-                </button>
-            </div>
+    {{-- 🔥 HEADER --}}
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">
+                Welcome back, {{ auth()->user()->name }}
+            </h1>
+            <p class="text-sm text-gray-500">Your financial overview</p>
         </div>
 
-        <!-- 🔄 QUICK STATS -->
-        <div class="grid grid-cols-3 gap-4">
-            <div class="bg-gray-800 p-4 rounded-xl">
-                <p class="text-gray-400 text-xs">Transactions</p>
-                <h2 class="text-lg font-bold">{{ $transactions->count() }}</h2>
-            </div>
+        <div class="text-right">
+            <p class="text-xs text-gray-400">Available Balance</p>
+            <h2 class="text-3xl font-bold text-indigo-600">
+                ${{ number_format($balance, 2) }}
+            </h2>
+        </div>
+    </div>
 
-            <div class="bg-gray-800 p-4 rounded-xl">
-                <p class="text-gray-400 text-xs">Active Loans</p>
-                <h2 class="text-lg font-bold">{{ $loans->count() }}</h2>
-            </div>
 
-            <div class="bg-gray-800 p-4 rounded-xl">
-                <p class="text-gray-400 text-xs">Status</p>
-                <h2 class="text-green-400 font-bold">Active</h2>
-            </div>
+    {{-- 💳 STATS CARDS --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        {{-- Savings --}}
+        <div class="bg-white rounded-2xl shadow p-5">
+            <p class="text-sm text-gray-500">Savings</p>
+            <h3 class="text-xl font-semibold text-gray-800 mt-1">
+                ${{ number_format($savings, 2) }}
+            </h3>
         </div>
 
-        <!-- 📜 TRANSACTIONS -->
-        <div class="bg-gray-800 rounded-2xl p-5">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold">Recent Activity</h2>
-            </div>
+        {{-- Active Loans --}}
+        <div class="bg-white rounded-2xl shadow p-5">
+            <p class="text-sm text-gray-500">Active Loans</p>
+            <h3 class="text-xl font-semibold text-gray-800 mt-1">
+                {{ $activeLoans }}
+            </h3>
+        </div>
 
-            <div class="space-y-3">
-                @forelse($transactions as $tx)
-                    <div class="flex justify-between items-center bg-gray-900 p-3 rounded-lg">
-                        <div>
-                            <p class="text-sm font-medium capitalize">{{ $tx->type }}</p>
-                            <p class="text-xs text-gray-400">
-                                {{ \Carbon\Carbon::parse($tx->transacted_at)->format('M d, Y') }}
-                            </p>
-                        </div>
+        {{-- Loan Balance --}}
+        <div class="bg-white rounded-2xl shadow p-5">
+            <p class="text-sm text-gray-500">Loan Exposure</p>
+            <h3 class="text-xl font-semibold text-red-500 mt-1">
+                ${{ number_format($loanBalance, 2) }}
+            </h3>
+        </div>
 
-                        <p class="font-semibold 
-                            {{ $tx->type === 'deposit' ? 'text-green-400' : 'text-red-400' }}">
-                            {{ $tx->type === 'deposit' ? '+' : '-' }}
-                            ₱{{ number_format($tx->amount, 2) }}
+    </div>
+
+
+    {{-- 📊 MINI INSIGHT SECTION --}}
+    <div class="grid md:grid-cols-2 gap-6">
+
+        {{-- Activity --}}
+        <div class="bg-white rounded-2xl shadow p-5">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">
+                Recent Activity
+            </h3>
+
+            @forelse($transactions as $tx)
+                <div class="flex justify-between items-center py-2 border-b last:border-none">
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">
+                            {{ ucfirst($tx->type) }}
+                        </p>
+                        <p class="text-xs text-gray-400">
+                            {{ $tx->created_at->diffForHumans() }}
                         </p>
                     </div>
-                @empty
-                    <p class="text-gray-400 text-sm">No transactions yet.</p>
-                @endforelse
-            </div>
+
+                    <span class="text-sm font-semibold 
+                        {{ $tx->type == 'deposit' ? 'text-green-500' : 'text-red-500' }}">
+                        {{ $tx->type == 'deposit' ? '+' : '-' }}
+                        ${{ number_format($tx->amount, 2) }}
+                    </span>
+                </div>
+            @empty
+                <p class="text-sm text-gray-400">No transactions yet</p>
+            @endforelse
+        </div>
+
+
+        {{-- Loans Overview --}}
+        <div class="bg-white rounded-2xl shadow p-5">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">
+                Loans Overview
+            </h3>
+
+            @forelse($loans as $loan)
+                <div class="mb-4">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="text-gray-600">
+                            ${{ number_format($loan->amount, 2) }}
+                        </span>
+                        <span class="capitalize text-xs px-2 py-1 rounded-full 
+                            {{ $loan->status == 'approved' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600' }}">
+                            {{ $loan->status }}
+                        </span>
+                    </div>
+
+                    {{-- Fake progress bar (upgrade later with real %) --}}
+                    <div class="w-full bg-gray-100 rounded-full h-2">
+                        <div class="bg-indigo-500 h-2 rounded-full w-1/2"></div>
+                    </div>
+                </div>
+            @empty
+                <p class="text-sm text-gray-400">No loans yet</p>
+            @endforelse
         </div>
 
     </div>
-</div>
 
-<!-- ================= MODALS ================= -->
 
-<!-- 💰 Deposit Modal -->
-<div id="depositModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center">
-    <div class="bg-gray-900 p-6 rounded-xl w-80">
-        <h2 class="text-lg font-semibold mb-4">Deposit</h2>
+    {{-- 🚀 QUICK ACTIONS --}}
+    <div class="bg-white rounded-2xl shadow p-5 flex justify-between items-center">
 
-        <input type="number" id="depositAmount"
-            class="w-full p-2 rounded bg-gray-800 border border-gray-700 mb-4"
-            placeholder="Enter amount">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-700">
+                Quick Actions
+            </h3>
+            <p class="text-sm text-gray-400">
+                Manage your finances quickly
+            </p>
+        </div>
 
-        <button onclick="submitDeposit()"
-            class="w-full bg-green-500 py-2 rounded hover:bg-green-600">
-            Confirm
-        </button>
+        <div class="flex gap-3">
+            <a href="{{ route('wallet') }}"
+               class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">
+                Open Wallet
+            </a>
 
-        <button onclick="closeModal('depositModal')"
-            class="w-full mt-2 text-gray-400 text-sm">Cancel</button>
+            <a href="#"
+               class="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300">
+                Apply Loan
+            </a>
+        </div>
+
     </div>
+
 </div>
-
-<!-- 💸 Withdraw Modal -->
-<div id="withdrawModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center">
-    <div class="bg-gray-900 p-6 rounded-xl w-80">
-        <h2 class="text-lg font-semibold mb-4">Withdraw</h2>
-
-        <input type="number" id="withdrawAmount"
-            class="w-full p-2 rounded bg-gray-800 border border-gray-700 mb-4"
-            placeholder="Enter amount">
-
-        <button onclick="submitWithdraw()"
-            class="w-full bg-red-500 py-2 rounded hover:bg-red-600">
-            Confirm
-        </button>
-
-        <button onclick="closeModal('withdrawModal')"
-            class="w-full mt-2 text-gray-400 text-sm">Cancel</button>
-    </div>
-</div>
-
-<!-- ================= JS ================= -->
-<script>
-function openModal(id) {
-    document.getElementById(id).classList.remove('hidden');
-}
-
-function closeModal(id) {
-    document.getElementById(id).classList.add('hidden');
-}
-
-function submitDeposit() {
-    let amount = document.getElementById('depositAmount').value;
-
-    fetch('/wallet/deposit', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({ amount: amount })
-    })
-    .then(res => res.json())
-    .then(data => {
-        location.reload();
-    });
-}
-
-function submitWithdraw() {
-    let amount = document.getElementById('withdrawAmount').value;
-
-    fetch('/wallet/withdraw', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({ amount: amount })
-    })
-    .then(res => res.json())
-    .then(data => {
-        location.reload();
-    });
-}
-</script>
-
 @endsection

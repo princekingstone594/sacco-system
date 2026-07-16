@@ -13,7 +13,12 @@
             </div>
 
             <p class="text-sm opacity-80">Total Balance</p>
-            <h1 class="text-4xl font-bold mt-1">₱{{ number_format($balance, 2) }}</h1>
+
+            <h1 id="balance"
+                data-value="{{ $balance }}"
+                class="text-4xl font-bold mt-1">
+                ₱{{ number_format($balance, 2) }}
+            </h1>
 
             <div class="flex gap-6 mt-4 text-sm">
                 <div>
@@ -28,15 +33,16 @@
                 </div>
             </div>
 
-            <!-- ACTION BUTTONS -->
             <div class="flex gap-3 mt-6">
-                <button onclick="openModal('depositModal')" 
-                    class="bg-white text-black px-4 py-2 rounded-lg font-semibold hover:scale-105 transition">
+                <button onclick="openModal('deposit')"
+                    class="bg-white text-black px-4 py-2 rounded-lg font-semibold
+                           hover:scale-105 active:scale-95 transition">
                     + Deposit
                 </button>
 
-                <button onclick="openModal('withdrawModal')" 
-                    class="bg-black/30 border border-white px-4 py-2 rounded-lg hover:bg-black/50 transition">
+                <button onclick="openModal('withdraw')"
+                    class="bg-black/30 border border-white px-4 py-2 rounded-lg
+                           hover:bg-black/50 hover:scale-105 active:scale-95 transition">
                     − Withdraw
                 </button>
             </div>
@@ -62,11 +68,10 @@
 
         <!-- 📜 TRANSACTIONS -->
         <div class="bg-gray-800 rounded-2xl p-5">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold">Recent Activity</h2>
-            </div>
+            <h2 class="text-lg font-semibold mb-4">Recent Activity</h2>
 
-            <div class="space-y-3">
+            <!-- ✅ ONLY CHANGE HERE -->
+            <div id="transactionList" class="space-y-3">
                 @forelse($transactions as $tx)
                     <div class="flex justify-between items-center bg-gray-900 p-3 rounded-lg">
                         <div>
@@ -76,8 +81,7 @@
                             </p>
                         </div>
 
-                        <p class="font-semibold 
-                            {{ $tx->type === 'deposit' ? 'text-green-400' : 'text-red-400' }}">
+                        <p class="font-semibold {{ $tx->type === 'deposit' ? 'text-green-400' : 'text-red-400' }}">
                             {{ $tx->type === 'deposit' ? '+' : '-' }}
                             ₱{{ number_format($tx->amount, 2) }}
                         </p>
@@ -91,88 +95,135 @@
     </div>
 </div>
 
-<!-- ================= MODALS ================= -->
+<!-- MODAL + TOAST unchanged -->
 
-<!-- 💰 Deposit Modal -->
-<div id="depositModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center">
-    <div class="bg-gray-900 p-6 rounded-xl w-80">
-        <h2 class="text-lg font-semibold mb-4">Deposit</h2>
-
-        <input type="number" id="depositAmount"
-            class="w-full p-2 rounded bg-gray-800 border border-gray-700 mb-4"
-            placeholder="Enter amount">
-
-        <button onclick="submitDeposit()"
-            class="w-full bg-green-500 py-2 rounded hover:bg-green-600">
-            Confirm
-        </button>
-
-        <button onclick="closeModal('depositModal')"
-            class="w-full mt-2 text-gray-400 text-sm">Cancel</button>
-    </div>
-</div>
-
-<!-- 💸 Withdraw Modal -->
-<div id="withdrawModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center">
-    <div class="bg-gray-900 p-6 rounded-xl w-80">
-        <h2 class="text-lg font-semibold mb-4">Withdraw</h2>
-
-        <input type="number" id="withdrawAmount"
-            class="w-full p-2 rounded bg-gray-800 border border-gray-700 mb-4"
-            placeholder="Enter amount">
-
-        <button onclick="submitWithdraw()"
-            class="w-full bg-red-500 py-2 rounded hover:bg-red-600">
-            Confirm
-        </button>
-
-        <button onclick="closeModal('withdrawModal')"
-            class="w-full mt-2 text-gray-400 text-sm">Cancel</button>
-    </div>
-</div>
-
-<!-- ================= JS ================= -->
 <script>
-function openModal(id) {
-    document.getElementById(id).classList.remove('hidden');
+let actionType = '';
+
+function openModal(type) {
+    actionType = type;
+
+    document.getElementById('modalTitle').innerText =
+        type === 'deposit' ? '💰 Deposit Funds' : '💸 Withdraw Funds';
+
+    const modal = document.getElementById('modal');
+    const box = document.getElementById('modalBox');
+
+    modal.classList.remove('hidden');
+
+    setTimeout(() => {
+        box.classList.remove('scale-95', 'opacity-0');
+        box.classList.add('scale-100', 'opacity-100');
+    }, 10);
 }
 
-function closeModal(id) {
-    document.getElementById(id).classList.add('hidden');
+function closeModal() {
+    const modal = document.getElementById('modal');
+    const box = document.getElementById('modalBox');
+
+    box.classList.add('scale-95', 'opacity-0');
+
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 200);
 }
 
-function submitDeposit() {
-    let amount = document.getElementById('depositAmount').value;
+/* 🔄 AJAX SUBMIT */
+document.getElementById('walletForm').addEventListener('submit', function(e) {
+    e.preventDefault();
 
-    fetch('/wallet/deposit', {
+    const formData = new FormData(this);
+
+    fetch(`/wallet/${actionType}`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}'
         },
-        body: JSON.stringify({ amount: amount })
+        body: formData
     })
     .then(res => res.json())
     .then(data => {
-        location.reload();
+
+        if (data.success) {
+            animateBalance(data.balance);
+
+            // ✅ ONLY ADDITION (LIVE TRANSACTION)
+            addTransaction({
+                type: actionType,
+                amount: formData.get('amount'),
+                date: new Date().toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: '2-digit',
+                    year: 'numeric'
+                })
+            });
+
+            showToast(data.message);
+            closeModal();
+        }
     });
+});
+
+/* 💎 ADD THIS FUNCTION */
+function addTransaction(tx) {
+    const list = document.getElementById('transactionList');
+
+    const item = document.createElement('div');
+    item.className = "flex justify-between items-center bg-gray-900 p-3 rounded-lg";
+
+    item.innerHTML = `
+        <div>
+            <p class="text-sm font-medium capitalize">${tx.type}</p>
+            <p class="text-xs text-gray-400">${tx.date}</p>
+        </div>
+
+        <p class="font-semibold ${tx.type === 'deposit' ? 'text-green-400' : 'text-red-400'}">
+            ${tx.type === 'deposit' ? '+' : '-'}
+            ₱${parseFloat(tx.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
+        </p>
+    `;
+
+    list.prepend(item);
+
+    if (list.children.length > 10) {
+        list.removeChild(list.lastChild);
+    }
 }
 
-function submitWithdraw() {
-    let amount = document.getElementById('withdrawAmount').value;
+/* 💎 BALANCE ANIMATION (UNCHANGED) */
+function animateBalance(newBalance) {
+    const el = document.getElementById('balance');
+    let current = parseFloat(el.dataset.value);
 
-    fetch('/wallet/withdraw', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({ amount: amount })
-    })
-    .then(res => res.json())
-    .then(data => {
-        location.reload();
-    });
+    const duration = 500;
+    const start = performance.now();
+
+    function update(time) {
+        const progress = Math.min((time - start) / duration, 1);
+        const value = current + (newBalance - current) * progress;
+
+        el.innerText = '₱' + value.toLocaleString(undefined, {minimumFractionDigits: 2});
+        
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        } else {
+            el.dataset.value = newBalance;
+        }
+    }
+
+    requestAnimationFrame(update);
+}
+
+/* 🔔 TOAST (UNCHANGED) */
+function showToast(message) {
+    const toast = document.getElementById('toast');
+
+    toast.innerText = message;
+    toast.classList.remove('opacity-0', 'translate-y-5');
+
+    setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-5');
+    }, 2500);
 }
 </script>
 

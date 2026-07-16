@@ -12,6 +12,8 @@ use App\Http\Controllers\{
 };
 
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\LoanController as AdminLoanController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -30,12 +32,11 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | MEMBER DASHBOARD (ONLY USER DATA)
+    | DASHBOARD
     |--------------------------------------------------------------------------
     */
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
-
 
     /*
     |--------------------------------------------------------------------------
@@ -75,11 +76,14 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | USER LOANS (PERSONAL)
+    | USER LOANS (CLEAN + CONSISTENT)
     |--------------------------------------------------------------------------
     */
-    Route::get('/my-loans', [LoanController::class, 'myLoans'])
-        ->name('loans.my');
+    Route::get('/loans', [LoanController::class, 'index'])
+        ->name('loans.index');
+
+    Route::post('/loans', [LoanController::class, 'store'])
+        ->name('loans.store');
 
 
     /*
@@ -113,7 +117,7 @@ Route::prefix('admin')
 
         /*
         |--------------------------------------------------------------------------
-        | MEMBERS MANAGEMENT
+        | MEMBERS
         |--------------------------------------------------------------------------
         */
         Route::resource('members', MemberController::class);
@@ -121,23 +125,23 @@ Route::prefix('admin')
 
         /*
         |--------------------------------------------------------------------------
-        | LOANS MANAGEMENT
+        | LOANS (ADMIN CONTROL)
         |--------------------------------------------------------------------------
         */
-        Route::resource('loans', LoanController::class)
-              ->names('admin.loans');
+        Route::resource('loans', AdminLoanController::class)
+            ->names('admin.loans');
 
-        Route::post('loans/{loan}/approve', [LoanController::class, 'approve'])
-            ->name('loans.approve');
+        Route::post('loans/{loan}/approve', [AdminLoanController::class, 'approve'])
+            ->name('admin.loans.approve');
 
-        Route::post('loans/{loan}/reject', [LoanController::class, 'reject'])
-            ->name('loans.reject');
+        Route::post('loans/{loan}/reject', [AdminLoanController::class, 'reject'])
+            ->name('admin.loans.reject');
 
-        Route::post('loans/{loan}/disburse', [LoanController::class, 'disburse'])
-            ->name('loans.disburse');
+        Route::post('loans/{loan}/disburse', [AdminLoanController::class, 'disburse'])
+            ->name('admin.loans.disburse');
 
-        Route::post('loans/{loan}/repayments', [LoanController::class, 'repay'])
-            ->name('loans.repayments.store');
+        Route::post('loans/{loan}/repayments', [AdminLoanController::class, 'repay'])
+            ->name('admin.loans.repayments.store');
 
 
         /*

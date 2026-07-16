@@ -7,56 +7,66 @@ use Illuminate\View\View;
 class DashboardController extends Controller
 {
     /**
-     * USER DASHBOARD
+     * USER DASHBOARD (OVERVIEW ONLY)
      */
     public function index(): View
     {
         $user = auth()->user();
 
-        // 👉 Redirect admins away
+        // 🚫 Redirect admins
         if ($user->is_admin) {
             return redirect()->route('admin.dashboard');
         }
 
         $member = $user->member ?? null;
 
+        // 🧱 Empty state
         if (!$member) {
             return view('dashboard.user', [
                 'balance' => 0,
                 'savings' => 0,
                 'loans' => collect(),
                 'transactions' => collect(),
+                'loanBalance' => 0,
+                'activeLoans' => 0,
             ]);
         }
 
-        // 💰 Savings
+        // 💰 SAVINGS (REAL MONEY)
         $savings = $member->accounts()->sum('balance');
 
-        // 💸 Loans
+        // 💸 LOANS
         $loans = $member->loans()->latest()->get();
 
-        // 🧾 Transactions
-        $transactions = $member->transactions()->latest()->take(5)->get();
+        $approvedLoans = $loans->where('status', 'approved');
 
-        // 🧮 Loan Balance
-        $loanBalance = $loans
-            ->where('status', 'approved')
-            ->sum('amount');
+        $loanBalance = $approvedLoans->sum('amount');
 
-        // 💎 Total Balance
-        $balance = $savings + $loanBalance;
+        $activeLoans = $approvedLoans->count();
+
+        // 🧾 RECENT ACTIVITY (LIMITED)
+        $transactions = $member->transactions()
+            ->latest()
+            ->take(5)
+            ->get();
+
+        // 💎 IMPORTANT: Dashboard balance = SAVINGS ONLY
+        // (wallet handles full financial view)
+        $balance = $savings;
 
         return view('dashboard.user', compact(
             'balance',
             'savings',
             'loans',
-            'transactions'
+            'transactions',
+            'loanBalance',
+            'activeLoans'
         ));
     }
 
 
     /**
-     * WALLET PAGE (FULL VERSION)
+     * WALLET PAGE (FULL FINANCIAL VIEW)
      */
     public function wallet(): View
     {
@@ -74,16 +84,26 @@ class DashboardController extends Controller
             ]);
         }
 
+        // 💰 SAVINGS
         $savings = $member->accounts()->sum('balance');
+
+        // 💸 LOANS
         $loans = $member->loans()->latest()->get();
-        $transactions = $member->transactions()->latest()->take(10)->get();
 
         $loanBalance = $loans
             ->where('status', 'approved')
             ->sum('amount');
 
+        // 💎 FULL WALLET BALANCE (this is where combining makes sense)
         $balance = $savings + $loanBalance;
 
+        // 🧾 TRANSACTIONS (MORE THAN DASHBOARD)
+        $transactions = $member->transactions()
+            ->latest()
+            ->take(10)
+            ->get();
+
+        // 📈 ANALYTICS
         $income = $member->transactions()
             ->where('type', 'deposit')
             ->sum('amount');

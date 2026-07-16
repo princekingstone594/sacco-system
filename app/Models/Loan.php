@@ -24,6 +24,10 @@ class Loan extends Model
         'due_on',
         'status',
         'purpose',
+        'amount',
+        'duration_months',
+        'approved_at',
+        'disbursed_at',
     ];
 
     protected function casts(): array
@@ -50,7 +54,7 @@ class Loan extends Model
     // =========================
     // RELATIONSHIPS
     // =========================
-    public function member(): BelongsTo
+    public function member()
     {
         return $this->belongsTo(Member::class);
     }
@@ -60,7 +64,7 @@ class Loan extends Model
         return $this->belongsTo(LoanProduct::class, 'loan_product_id');
     }
 
-    public function repayments(): HasMany
+    public function repayments()
     {
         return $this->hasMany(LoanRepayment::class);
     }

@@ -16,6 +16,7 @@ class LoanRepayment extends Model
         'amount',
         'reference',
         'paid_on',
+        'paid_at',
         'notes',
     ];
 
@@ -24,6 +25,8 @@ class LoanRepayment extends Model
         return [
             'amount' => 'decimal:2',
             'paid_on' => 'date',
+            'paid' => 'boolean',
+            'due_date',
         ];
     }
 
