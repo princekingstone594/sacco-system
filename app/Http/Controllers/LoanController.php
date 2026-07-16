@@ -112,6 +112,16 @@ class LoanController extends Controller
     {
         $loan->load(['member', 'product', 'repayments.postedBy']);
         return view('loans.show', compact('loan'));
+
+        $loans = auth()->user()->myLoans()->with('repayments')->get();
+
+        // STAFF CHECK
+        if (auth()->user()->role === 'staff') {
+            // Staff can see ALL loans
+            $loans = \App\Models\Loan::with('repayments')->get();
+        }
+
+        return view('dashboard.loans', compact('loans'));
     }
 
     public function edit(Loan $loan): View
