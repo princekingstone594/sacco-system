@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\Transaction;
+use App\Models\AuditLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,223 +24,75 @@ class TransactionController extends Controller
 
         $transactions = Transaction::with(['member', 'account', 'postedBy'])
             ->when($type, fn ($q) => $q->where('type', $type))
-            ->latest('transacted_at')
-            ->paginate(15)
-            ->withQueryString();
+            ->latest()
+            ->paginate(20);
 
-        return view('transactions.index', compact('transactions', 'type'));
+        return view('transactions.index', compact('transactions'));
     }
-
 
     /*
     |--------------------------------------------------------------------------
-    | CREATE GENERAL TRANSACTION (ADMIN STYLE)
+    | STORE (DEPOSIT / WITHDRAW)
     |--------------------------------------------------------------------------
     */
-    public function create(Request $request): View
-    {
-        $accounts = Account::with('member')
-            ->where('status', 'active')
-            ->orderBy('account_no')
-            ->get();
-
-        $selectedAccount = $request->integer('account_id');
-
-        return view('transactions.create', [
-            'accounts' => $accounts,
-            'selectedAccount' => $selectedAccount,
-            'types' => Transaction::TYPES,
-        ]);
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | STORE GENERAL TRANSACTION (DEPOSIT / WITHDRAW / FEE)
-    |--------------------------------------------------------------------------
-    */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request)
     {
         $data = $request->validate([
             'account_id' => ['required', 'exists:accounts,id'],
-            'type' => ['required', Rule::in(array_keys(Transaction::TYPES))],
-            'amount' => ['required', 'numeric', 'min:1'],
-            'reference' => ['nullable', 'string', 'max:120'],
-            'transacted_at' => ['required', 'date'],
-            'description' => ['nullable', 'string', 'max:1000'],
+            'type'       => ['required', Rule::in(['deposit', 'withdraw'])],
+            'amount'     => ['required', 'numeric', 'min:1'],
+            'description'=> ['nullable', 'string'],
         ]);
 
-        DB::transaction(function () use ($data, $request) {
+        $user = auth()->user();
 
-            $account = Account::lockForUpdate()
-                ->with('member')
-                ->findOrFail($data['account_id']);
+        DB::transaction(function () use ($data, $user) {
 
-            $amount = (float) $data['amount'];
+            $account = Account::lockForUpdate()->findOrFail($data['account_id']);
 
-            // Determine direction
-            $signedAmount = in_array($data['type'], ['withdrawal', 'fee'], true)
-                ? -$amount
-                : $amount;
-
-            // Prevent overdraft
-            if ($account->balance + $signedAmount < 0) {
-                abort(422, 'This transaction would overdraw the account.');
+            // 💰 Handle balance
+            if ($data['type'] === 'deposit') {
+                $account->balance += $data['amount'];
+            } else {
+                if ($account->balance < $data['amount']) {
+                    abort(400, 'Insufficient balance');
+                }
+                $account->balance -= $data['amount'];
             }
 
-            // Update balance
-            $account->increment('balance', $signedAmount);
+            $account->save();
 
-            // Save transaction
-            Transaction::create([
-                ...$data,
-                'member_id' => $account->member_id,
-                'posted_by' => $request->user()->id,
+            // 🧾 Create transaction
+            $transaction = Transaction::create([
+                'account_id'  => $account->id,
+                'member_id'   => $account->member_id,
+                'type'        => $data['type'],
+                'amount'      => $data['amount'],
+                'description' => $data['description'] ?? null,
+                'posted_by'   => $user->id,
+            ]);
+
+            // 🛡️ AUDIT LOG (THIS IS STEP 6.4)
+            AuditLog::create([
+                'user_id' => $user->id,
+                'action'  => strtoupper($data['type']), // DEPOSIT / WITHDRAW
+                'entity'  => 'transaction',
+                'entity_id' => $transaction->id,
+                'meta' => json_encode([
+                    'amount' => $data['amount'],
+                    'account_id' => $account->id,
+                ]),
             ]);
         });
 
-        return redirect()->route('transactions.index')
-            ->with('success', 'Transaction posted successfully.');
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | WALLET: SIMPLE DEPOSIT FORM (USER)
-    |--------------------------------------------------------------------------
-    */
-    public function createSavings(): View
-    {
-        $member = auth()->user()->member;
-
-        return view('savings.create', compact('member'));
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | WALLET: STORE DEPOSIT (USER FRIENDLY)
-    |--------------------------------------------------------------------------
-    */
-    public function storeSavings(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'amount' => ['required', 'numeric', 'min:1'],
-        ]);
-
-        $member = auth()->user()->member;
-
-        if (!$member) {
-            return back()->with('error', 'Member profile not found.');
-        }
-
-        DB::transaction(function () use ($member, $request) {
-
-            // 🔥 Find or create savings account
-            $account = Account::firstOrCreate(
-                [
-                    'member_id' => $member->id,
-                    'type' => 'savings',
-                ],
-                [
-                    'balance' => 0,
-                    'status' => 'active',
-                ]
-            );
-
-            $amount = (float) $request->amount;
-
-            // Update balance
-            $account->increment('balance', $amount);
-
-            // Record transaction (standardized)
-            Transaction::create([
-                'account_id' => $account->id,
-                'member_id' => $member->id,
-                'type' => 'deposit',
-                'amount' => $amount,
-                'transacted_at' => now(),
-                'posted_by' => auth()->id(),
-                'description' => 'Wallet deposit',
-            ]);
-        });
-
-        return redirect()->route('wallet')
-            ->with('success', 'Deposit successful.');
-    }
-
-    public function deposit(Request $request)
-    {
-      $data = $request->validate([
-        'amount' => ['required', 'numeric', 'min:1'],
-      ]);
-
-      return DB::transaction(function () use ($data, $request) {
-
-        $member = $request->user()->member;
-
-        $account = $member->accounts()->lockForUpdate()->first();
-
-        if (!$account) {
-            return response()->json(['message' => 'No account found'], 404);
-        }
-
-        $account->increment('balance', $data['amount']);
-
-        Transaction::create([
-            'member_id' => $member->id,
-            'account_id' => $account->id,
-            'type' => 'deposit',
-            'amount' => $data['amount'],
-            'transacted_at' => now(),
-            'posted_by' => $request->user()->id,
-        ]);
-
-        return response()->json([
-            'message' => 'Deposit successful',
-            'balance' => $account->balance
-        ]);
-    });
-    }
-
-
-    public function withdraw(Request $request)
-    {
-       $data = $request->validate([
-        'amount' => ['required', 'numeric', 'min:1'],
-        ]);
-
-        return DB::transaction(function () use ($data, $request) {
-
-         $member = $request->user()->member;
-
-         $account = $member->accounts()->lockForUpdate()->first();
-
-         if (!$account) {
-            return response()->json(['message' => 'No account found'], 404);
-         }
-
-         if ($account->balance < $data['amount']) {
+        // 🔁 JSON for your realtime wallet UI
+        if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Insufficient balance'
-            ], 422);
-         }
+                'success' => true,
+                'message' => 'Transaction successful'
+            ]);
+        }
 
-         $account->decrement('balance', $data['amount']);
-
-         Transaction::create([
-            'member_id' => $member->id,
-            'account_id' => $account->id,
-            'type' => 'withdrawal',
-            'amount' => $data['amount'],
-            'transacted_at' => now(),
-            'posted_by' => $request->user()->id,
-         ]);
-
-         return response()->json([
-            'message' => 'Withdrawal successful',
-            'balance' => $account->balance
-         ]);
-        });
+        return redirect()->back()->with('success', 'Transaction successful');
     }
 }

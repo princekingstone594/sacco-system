@@ -6,6 +6,7 @@ use App\Models\Loan;
 use App\Models\LoanProduct;
 use App\Models\Member;
 use App\Models\Transaction;
+use App\Models\AuditLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -106,6 +107,12 @@ class LoanController extends Controller
                 ? 'Loan application submitted'
                 : 'Loan created and approved'
         );
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'loan_applied',
+            'description' => 'User applied for loan of '.$loan->amount,
+        ]);
     }
 
     public function show(Loan $loan): View
@@ -215,6 +222,12 @@ class LoanController extends Controller
         );
 
         return back()->with('success', 'Loan approved');
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'loan_approved',
+            'description' => 'Approved loan ID '.$loan->id,
+        ]);
     }
 
     public function reject(Loan $loan)
