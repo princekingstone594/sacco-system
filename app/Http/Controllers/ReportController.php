@@ -14,43 +14,63 @@ class ReportController extends Controller
 {
     /*
     |--------------------------------------------------------------------------
-    | MAIN REPORT PAGE (THIS FIXES /reports ROUTE)
+    | MAIN REPORT PAGE (/reports)
     |--------------------------------------------------------------------------
     */
     public function index()
     {
         $totalSavings = Account::sum('balance');
-        $totalLoans = Loan::sum('loanm_amount');
-        $totalRepaid = Transaction::where('type', 'loan_repayment')->sum('amount');
+
+        // Total loans issued
+        $totalLoans = Loan::sum('principal');
+
+        // Active loans count
+        $activeLoans = Loan::where('status', 'active')->count();
+
+        // ✅ IMPORTANT: match Blade variable name
+        $repaidLoans = Transaction::where('type', 'loan_repayment')->sum('amount');
+
         $totalDeposits = Transaction::where('type', 'deposit')->sum('amount');
         $totalWithdrawals = Transaction::where('type', 'withdrawal')->sum('amount');
+
+        $transactionCount = Transaction::count();
 
         return view('reports.index', compact(
             'totalSavings',
             'totalLoans',
-            'totalRepaid',
+            'activeLoans',
+            'repaidLoans', 
             'totalDeposits',
-            'totalWithdrawals'
+            'totalWithdrawals',
+            'transactionCount'
         ));
     }
 
     /*
     |--------------------------------------------------------------------------
-    | DASHBOARD SUMMARY (OPTIONAL PAGE)
+    | DASHBOARD SUMMARY
     |--------------------------------------------------------------------------
     */
     public function summary()
     {
         $totalSavings = Account::sum('balance');
-        $totalLoans = Loan::where('status', 'approved')->sum('amount');
-        $totalRepaid = Transaction::where('type', 'loan_repayment')->sum('amount');
+
+        // Only active loans total
+        $totalLoans = Loan::where('status', 'active')->sum('principal');
+
+        $activeLoans = Loan::where('status', 'active')->count();
+
+        // ✅ keep naming consistent everywhere
+        $repaidLoans = Transaction::where('type', 'loan_repayment')->sum('amount');
+
         $totalDeposits = Transaction::where('type', 'deposit')->sum('amount');
         $totalWithdrawals = Transaction::where('type', 'withdrawal')->sum('amount');
 
         return view('reports.summary', compact(
             'totalSavings',
             'totalLoans',
-            'totalRepaid',
+            'activeLoans',
+            'repaidLoans',
             'totalDeposits',
             'totalWithdrawals'
         ));
@@ -99,11 +119,16 @@ class ReportController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | EXPORT EXCEL (NEW)
+    | EXPORT EXCEL
     |--------------------------------------------------------------------------
     */
     public function exportExcel()
     {
         return Excel::download(new TransactionsExport, 'transactions.xlsx');
+    }
+
+    public function downloadPdf()
+    {
+        return "PDF download coming soon...";
     }
 }

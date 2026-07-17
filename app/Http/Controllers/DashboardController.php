@@ -34,7 +34,7 @@ class DashboardController extends Controller
                 'totalRepaid' => 0,
                 'loanBalance' => 0,
                 'transactions' => collect(),
-                'loans' => collect(), // ✅ FIX
+                'loans' => collect(),
                 'monthlyTransactions' => [],
             ]);
         }
@@ -55,17 +55,20 @@ class DashboardController extends Controller
 
         $loansCount = $loansQuery->count();
 
+        // ✅ Active loans (match your Blade)
         $activeLoans = (clone $loansQuery)
             ->whereIn('status', ['approved', 'active'])
             ->count();
 
-        $totalBorrowed = (clone $loansQuery)->sum('amount');
+        // ✅ FIXED: use principal
+        $totalBorrowed = (clone $loansQuery)->sum('principal');
 
         // Full loans list (for Blade)
         $loans = (clone $loansQuery)
             ->latest()
             ->get();
 
+        // ✅ Total repaid from repayments table
         $totalRepaid = $member->loans()
             ->with('repayments')
             ->get()
@@ -75,7 +78,7 @@ class DashboardController extends Controller
                     ->sum('amount');
             });
 
-        // ✅ Loan balance
+        // ✅ Loan balance (remaining)
         $loanBalance = $totalBorrowed - $totalRepaid;
 
         /*
@@ -86,7 +89,7 @@ class DashboardController extends Controller
         $transactions = Transaction::whereHas('account', function ($q) use ($member) {
                 $q->where('member_id', $member->id);
             })
-            ->latest('transacted_at')
+            ->latest() // safer than transacted_at unless column exists
             ->limit(5)
             ->get();
 
@@ -96,13 +99,13 @@ class DashboardController extends Controller
         |-------------------------------
         */
         $monthlyTransactions = Transaction::select(
-                DB::raw('MONTH(transacted_at) as month'),
+                DB::raw('MONTH(created_at) as month'),
                 DB::raw('SUM(amount) as total')
             )
             ->whereHas('account', function ($q) use ($member) {
                 $q->where('member_id', $member->id);
             })
-            ->groupBy(DB::raw('MONTH(transacted_at)'))
+            ->groupBy(DB::raw('MONTH(created_at)'))
             ->pluck('total', 'month');
 
         /*
@@ -119,7 +122,7 @@ class DashboardController extends Controller
             'totalRepaid' => $totalRepaid,
             'loanBalance' => $loanBalance,
             'transactions' => $transactions,
-            'loans' => $loans, // ✅ FIX
+            'loans' => $loans,
             'monthlyTransactions' => $monthlyTransactions,
         ]);
     }

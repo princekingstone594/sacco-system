@@ -45,9 +45,9 @@
            Download PDF
         </a>
 
-        <a href="{{ route('reports.excel') }}" class="bg-green-600 px-4 py-2 rounded">
+        {{--<a href="{{ route('reports.excel') }}" class="bg-green-600 px-4 py-2 rounded">
            Export Excel
-        </a>
+        </a> --}}
     </div>
 
 </div>
