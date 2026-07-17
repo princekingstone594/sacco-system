@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
+use App\Models\Transaction;
+use App\Models\Loan;
 
 class DashboardController extends Controller
 {
     /**
-     * USER DASHBOARD (OVERVIEW ONLY)
+     * USER DASHBOARD
      */
     public function index(): View
     {
@@ -20,105 +23,104 @@ class DashboardController extends Controller
 
         $member = $user->member ?? null;
 
-        // 🧱 Empty state
+        // 🧊 EMPTY STATE
         if (!$member) {
             return view('dashboard.user', [
                 'balance' => 0,
                 'savings' => 0,
-                'loans' => collect(),
-                'transactions' => collect(),
-                'loanBalance' => 0,
+                'loansCount' => 0,
                 'activeLoans' => 0,
-            ]);
-        }
-
-        // 💰 SAVINGS (REAL MONEY)
-        $savings = $member->accounts()->sum('balance');
-
-        // 💸 LOANS
-        $loans = $member->loans()->latest()->get();
-
-        $approvedLoans = $loans->where('status', 'approved');
-
-        $loanBalance = $approvedLoans->sum('amount');
-
-        $activeLoans = $approvedLoans->count();
-
-        // 🧾 RECENT ACTIVITY (LIMITED)
-        $transactions = $member->transactions()
-            ->latest()
-            ->take(5)
-            ->get();
-
-        // 💎 IMPORTANT: Dashboard balance = SAVINGS ONLY
-        // (wallet handles full financial view)
-        $balance = $savings;
-
-        return view('dashboard.user', compact(
-            'balance',
-            'savings',
-            'loans',
-            'transactions',
-            'loanBalance',
-            'activeLoans'
-        ));
-    }
-
-
-    /**
-     * WALLET PAGE (FULL FINANCIAL VIEW)
-     */
-    public function wallet(): View
-    {
-        $user = auth()->user();
-        $member = $user->member ?? null;
-
-        if (!$member) {
-            return view('dashboard.wallet', [
-                'balance' => 0,
-                'savings' => 0,
-                'loans' => collect(),
+                'totalBorrowed' => 0,
+                'totalRepaid' => 0,
+                'loanBalance' => 0,
                 'transactions' => collect(),
-                'income' => 0,
-                'expense' => 0,
+                'loans' => collect(), // ✅ FIX
+                'monthlyTransactions' => [],
             ]);
         }
 
-        // 💰 SAVINGS
+        /*
+        |-------------------------------
+        | 💰 SAVINGS
+        |-------------------------------
+        */
         $savings = $member->accounts()->sum('balance');
 
-        // 💸 LOANS
-        $loans = $member->loans()->latest()->get();
+        /*
+        |-------------------------------
+        | 💳 LOANS
+        |-------------------------------
+        */
+        $loansQuery = $member->loans();
 
-        $loanBalance = $loans
-            ->where('status', 'approved')
-            ->sum('amount');
+        $loansCount = $loansQuery->count();
 
-        // 💎 FULL WALLET BALANCE (this is where combining makes sense)
-        $balance = $savings + $loanBalance;
+        $activeLoans = (clone $loansQuery)
+            ->whereIn('status', ['approved', 'active'])
+            ->count();
 
-        // 🧾 TRANSACTIONS (MORE THAN DASHBOARD)
-        $transactions = $member->transactions()
+        $totalBorrowed = (clone $loansQuery)->sum('amount');
+
+        // Full loans list (for Blade)
+        $loans = (clone $loansQuery)
             ->latest()
-            ->take(10)
             ->get();
 
-        // 📈 ANALYTICS
-        $income = $member->transactions()
-            ->where('type', 'deposit')
-            ->sum('amount');
+        $totalRepaid = $member->loans()
+            ->with('repayments')
+            ->get()
+            ->sum(function ($loan) {
+                return $loan->repayments
+                    ->where('paid', true)
+                    ->sum('amount');
+            });
 
-        $expense = $member->transactions()
-            ->where('type', 'withdrawal')
-            ->sum('amount');
+        // ✅ Loan balance
+        $loanBalance = $totalBorrowed - $totalRepaid;
 
-        return view('dashboard.wallet', compact(
-            'balance',
-            'savings',
-            'loans',
-            'transactions',
-            'income',
-            'expense'
-        ));
+        /*
+        |-------------------------------
+        | 🧾 TRANSACTIONS
+        |-------------------------------
+        */
+        $transactions = Transaction::whereHas('account', function ($q) use ($member) {
+                $q->where('member_id', $member->id);
+            })
+            ->latest('transacted_at')
+            ->limit(5)
+            ->get();
+
+        /*
+        |-------------------------------
+        | 📊 MONTHLY CHART
+        |-------------------------------
+        */
+        $monthlyTransactions = Transaction::select(
+                DB::raw('MONTH(transacted_at) as month'),
+                DB::raw('SUM(amount) as total')
+            )
+            ->whereHas('account', function ($q) use ($member) {
+                $q->where('member_id', $member->id);
+            })
+            ->groupBy(DB::raw('MONTH(transacted_at)'))
+            ->pluck('total', 'month');
+
+        /*
+        |-------------------------------
+        | 🚀 RETURN VIEW
+        |-------------------------------
+        */
+        return view('dashboard.user', [
+            'balance' => $savings,
+            'savings' => $savings,
+            'loansCount' => $loansCount,
+            'activeLoans' => $activeLoans,
+            'totalBorrowed' => $totalBorrowed,
+            'totalRepaid' => $totalRepaid,
+            'loanBalance' => $loanBalance,
+            'transactions' => $transactions,
+            'loans' => $loans, // ✅ FIX
+            'monthlyTransactions' => $monthlyTransactions,
+        ]);
     }
 }

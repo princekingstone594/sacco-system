@@ -127,7 +127,7 @@
         </div>
 
         <div class="flex gap-3">
-            <a href="{{ route('wallet') }}"
+            <a href="{{ route('wallet.index') }}"
                class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">
                 Open Wallet
             </a>

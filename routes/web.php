@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
 use App\Http\Controllers\{
     DashboardController,
@@ -8,12 +9,12 @@ use App\Http\Controllers\{
     LoanProductController,
     MemberController,
     ProfileController,
-    TransactionController
+    TransactionController,
+    ReportController,
+    WalletController
 };
 
 use App\Http\Controllers\Admin\AdminDashboardController;
-use App\Http\Controllers\Admin\LoanController as AdminLoanController;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -25,7 +26,7 @@ Route::get('/', fn () => redirect()->route('dashboard'));
 
 /*
 |--------------------------------------------------------------------------
-| AUTH ROUTES (MEMBER)
+| AUTH ROUTES (MEMBERS)
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
@@ -38,45 +39,19 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
 
+
     /*
     |--------------------------------------------------------------------------
-    | WALLET
+    | WALLET (✅ FIXED: ONLY ONE ROUTE)
     |--------------------------------------------------------------------------
     */
-    Route::get('/wallet', [DashboardController::class, 'wallet'])
-        ->name('wallet');
-
-    Route::post('/wallet/deposit', [TransactionController::class, 'deposit'])
-        ->name('wallet.deposit');
-
-    Route::post('/wallet/withdraw', [TransactionController::class, 'withdraw'])
-        ->name('wallet.withdraw');
+    Route::get('/wallet', [WalletController::class, 'index'])
+        ->name('wallet.index');
 
 
     /*
     |--------------------------------------------------------------------------
-    | TRANSACTIONS
-    |--------------------------------------------------------------------------
-    */
-    Route::resource('transactions', TransactionController::class)
-        ->only(['index', 'create', 'store']);
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SAVINGS
-    |--------------------------------------------------------------------------
-    */
-    Route::get('/savings/create', [TransactionController::class, 'createSavings'])
-        ->name('savings.create');
-
-    Route::post('/savings', [TransactionController::class, 'storeSavings'])
-        ->name('savings.store');
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | USER LOANS (CLEAN + CONSISTENT)
+    | LOANS
     |--------------------------------------------------------------------------
     */
     Route::get('/loans', [LoanController::class, 'index'])
@@ -88,12 +63,53 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | TRANSACTIONS
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/transactions', [TransactionController::class, 'index'])
+        ->name('transactions.index');
+
+    Route::post('/transactions/deposit', [TransactionController::class, 'deposit'])
+        ->name('transactions.deposit');
+
+    Route::post('/transactions/withdraw', [TransactionController::class, 'withdraw'])
+        ->name('transactions.withdraw');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | REPORTS
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/reports', [ReportController::class, 'index'])
+        ->name('reports.index');
+
+
+    /*
+    |--------------------------------------------------------------------------
     | PROFILE
     |--------------------------------------------------------------------------
     */
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
+
+    Route::patch('/profile', [ProfileController::class, 'update'])
+        ->name('profile.update');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOGOUT (✅ FIXED NAME)
+    |--------------------------------------------------------------------------
+    */
+    Route::post('/logout', function () {
+        Auth::logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+
+        return redirect('/login');
+    })->name('logout'); // ✅ FIXED HERE
+
 });
 
 
@@ -114,6 +130,20 @@ Route::prefix('admin')
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])
             ->name('admin.dashboard');
 
+        /*
+        |--------------------------------------------------------------------------
+        | LOANS
+        |--------------------------------------------------------------------------
+        */
+        Route::resource('loans', LoanController::class)
+            ->names('admin.loans');
+
+        /*
+        |--------------------------------------------------------------------------
+        | LOAN PRODUCTS
+        |--------------------------------------------------------------------------
+        */
+        Route::resource('loan-products', LoanProductController::class);
 
         /*
         |--------------------------------------------------------------------------
@@ -121,42 +151,4 @@ Route::prefix('admin')
         |--------------------------------------------------------------------------
         */
         Route::resource('members', MemberController::class);
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | LOANS (ADMIN CONTROL)
-        |--------------------------------------------------------------------------
-        */
-        Route::resource('loans', AdminLoanController::class)
-            ->names('admin.loans');
-
-        Route::post('loans/{loan}/approve', [AdminLoanController::class, 'approve'])
-            ->name('admin.loans.approve');
-
-        Route::post('loans/{loan}/reject', [AdminLoanController::class, 'reject'])
-            ->name('admin.loans.reject');
-
-        Route::post('loans/{loan}/disburse', [AdminLoanController::class, 'disburse'])
-            ->name('admin.loans.disburse');
-
-        Route::post('loans/{loan}/repayments', [AdminLoanController::class, 'repay'])
-            ->name('admin.loans.repayments.store');
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | LOAN PRODUCTS
-        |--------------------------------------------------------------------------
-        */
-        Route::resource('loan-products', LoanProductController::class)
-            ->except(['show']);
-            
-        Route::post('/notifications/read', function () {
-            auth()->user()->unreadNotifications->markAsRead();
-            return back();
-        })->name('notifications.read');
     });
-
-
-require __DIR__.'/auth.php';
