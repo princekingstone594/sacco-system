@@ -40,5 +40,15 @@
 
     </div>
 
+    <div class="flex gap-3">
+        <a href="{{ route('reports.pdf') }}" class="bg-red-600 px-4 py-2 rounded">
+           Download PDF
+        </a>
+
+        <a href="{{ route('reports.excel') }}" class="bg-green-600 px-4 py-2 rounded">
+           Export Excel
+        </a>
+    </div>
+
 </div>
 @endsection
