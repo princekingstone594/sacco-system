@@ -39,8 +39,9 @@ class TransactionController extends Controller
     {
         $data = $request->validate([
             'account_id' => ['required', 'exists:accounts,id'],
-            'type'       => ['required', Rule::in(['deposit', 'withdraw'])],
+            'type'       => ['required', Rule::in(['deposit', 'withdraw', 'withdrawal'])],
             'amount'     => ['required', 'numeric', 'min:1'],
+            'transacted_at' => ['nullable', 'date'],
             'description'=> ['nullable', 'string'],
         ]);
 
@@ -51,7 +52,9 @@ class TransactionController extends Controller
             $account = Account::lockForUpdate()->findOrFail($data['account_id']);
 
             // 💰 Handle balance
-            if ($data['type'] === 'deposit') {
+            $type = $data['type'] === 'withdraw' ? 'withdrawal' : $data['type'];
+
+            if ($type === 'deposit') {
                 $account->balance += $data['amount'];
             } else {
                 if ($account->balance < $data['amount']) {
@@ -66,8 +69,9 @@ class TransactionController extends Controller
             $transaction = Transaction::create([
                 'account_id'  => $account->id,
                 'member_id'   => $account->member_id,
-                'type'        => $data['type'],
+                'type'        => $type,
                 'amount'      => $data['amount'],
+                'transacted_at' => $data['transacted_at'] ?? now()->toDateString(),
                 'description' => $data['description'] ?? null,
                 'posted_by'   => $user->id,
             ]);
@@ -75,7 +79,7 @@ class TransactionController extends Controller
             // 🛡️ AUDIT LOG (THIS IS STEP 6.4)
             AuditLog::create([
                 'user_id' => $user->id,
-                'action'  => strtoupper($data['type']), // DEPOSIT / WITHDRAW
+                'action'  => strtoupper($type),
                 'entity'  => 'transaction',
                 'entity_id' => $transaction->id,
                 'meta' => json_encode([
@@ -93,6 +97,6 @@ class TransactionController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'Transaction successful');
+        return redirect()->route('transactions.index')->with('success', 'Transaction successful');
     }
 }

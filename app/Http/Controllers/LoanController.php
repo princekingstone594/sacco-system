@@ -86,9 +86,7 @@ class LoanController extends Controller
         $interest = $principal * ($product->interest_rate / 100);
         $totalPayable = $principal + $interest;
 
-        $isAdmin = auth()->user()->is_admin;
-
-        $status = $isAdmin ? 'approved' : 'pending';
+        $status = $data['status'] ?? (auth()->user()->is_admin ? 'approved' : 'pending');
 
         Loan::create([
             ...$data,
@@ -100,9 +98,7 @@ class LoanController extends Controller
             'due_on' => $issuedOn->copy()->addMonths($product->term_months),
         ]);
 
-        return redirect()->route(
-            $isAdmin ? 'admin.loans.index' : 'loans.my'
-        )->with('success',
+        return redirect()->route('loans.index')->with('success',
             $status === 'pending'
                 ? 'Loan application submitted'
                 : 'Loan created and approved'
@@ -150,17 +146,14 @@ class LoanController extends Controller
 
         $isAdmin = auth()->user()->is_admin;
 
-        return redirect()->route(
-            $isAdmin ? 'admin.loans.show' : 'loans.my',
-            $isAdmin ? $loan : []
-        )->with('success', 'Loan updated.');
+        return redirect()->route('loans.show', $loan)->with('success', 'Loan updated.');
     }
 
     public function destroy(Loan $loan): RedirectResponse
     {
         $loan->delete();
 
-        return redirect()->route('admin.loans.index')
+        return redirect()->route('loans.index')
             ->with('success', 'Loan removed.');
     }
 
@@ -169,8 +162,8 @@ class LoanController extends Controller
      */
     public function repay(Request $request, Loan $loan): RedirectResponse
     {
-        if ($loan->status !== 'disbursed') {
-            return back()->with('error', 'Loan must be disbursed first');
+        if (! in_array($loan->status, ['active', 'approved', 'disbursed'], true)) {
+            return redirect()->route('loans.show', $loan)->with('error', 'Loan must be active before repayment');
         }
 
         $data = $request->validate([
@@ -202,7 +195,7 @@ class LoanController extends Controller
             }
         });
 
-        return back()->with('success', 'Repayment recorded.');
+        return redirect()->route('loans.show', $loan)->with('success', 'Repayment recorded.');
     }
 
     public function approve(Loan $loan)
@@ -281,6 +274,7 @@ class LoanController extends Controller
             'loan_no' => ['required', 'string', 'max:50', 'unique:loans,loan_no'],
             'principal' => ['required', 'numeric', 'min:1'],
             'issued_on' => ['required', 'date'],
+            'status' => ['nullable', Rule::in(['pending', 'active', 'approved', 'disbursed', 'completed', 'rejected', 'paid', 'defaulted', 'written_off'])],
             'purpose' => ['nullable', 'string', 'max:1000'],
         ]);
     }

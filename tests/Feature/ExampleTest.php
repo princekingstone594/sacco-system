@@ -1,7 +1,8 @@
 <?php
 
-it('redirects guests from the root to the dashboard', function () {
+it('renders the public homepage for guests', function () {
     $response = $this->get('/');
 
-    $response->assertRedirect(route('dashboard'));
+    $response->assertOk();
+    $response->assertSee('Royalty Sacco');
 });

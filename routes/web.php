@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\{
+    AccountController,
     DashboardController,
     LoanController,
     LoanProductController,
@@ -41,7 +42,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('members', MemberController::class);
+    Route::resource('accounts', AccountController::class)->only(['index', 'show']);
     Route::resource('loans', LoanController::class);
+    Route::post('/loans/{loan}/repayments', [LoanController::class, 'repay'])->name('loans.repayments.store');
     Route::resource('loan-products', LoanProductController::class);
     Route::resource('transactions', TransactionController::class);
 
@@ -50,6 +53,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('/reports/pdf', [ReportController::class, 'downloadPdf'])->name('reports.pdf');
 });
