@@ -34,36 +34,24 @@
         ['label' => 'Products', 'route' => 'loan-products.index', 'active' => 'loan-products.*', 'admin' => true],
         ['label' => 'Reports', 'route' => 'reports.index', 'active' => 'reports.*', 'admin' => true],
         ['label' => 'Enquiries', 'route' => 'admin.customer-care.index', 'active' => 'admin.customer-care.*', 'admin' => true],
-        ['label' => 'Profile', 'route' => 'profile.edit', 'active' => 'profile.*'],
     ];
 @endphp
 
 <div class="min-h-screen">
     <header x-data="{ open: false }" class="sticky top-0 z-40 border-b border-[#e5decc] bg-white/90 shadow-sm backdrop-blur">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="flex h-20 items-center justify-between gap-4">
+            <div class="flex min-h-20 items-center justify-between gap-4 py-3">
                 <a href="{{ route($isAdmin ? 'admin.dashboard' : 'dashboard') }}" class="flex min-w-0 items-center gap-3">
                     <x-application-logo class="h-12 w-12 shrink-0 rounded-lg object-contain" />
                     <div class="min-w-0">
                         <p class="truncate text-sm font-extrabold uppercase tracking-wide text-[#4b2673]">Royalty Sacco</p>
-                        <p class="truncate text-xs font-semibold text-[#947b2f]">{{ $isAdmin ? 'SaaS admin console' : 'Member growth portal' }}</p>
+                        <p class="truncate text-xs font-semibold text-[#947b2f]">{{ $isAdmin ? 'Admin workspace' : 'Member growth portal' }}</p>
                     </div>
                 </a>
 
-                <nav class="hidden items-center gap-1 text-sm font-bold lg:flex">
-                    @foreach ($navItems as $item)
-                        @continue(($item['admin'] ?? false) && ! $isAdmin)
-                        @continue(($item['member'] ?? false) && $isAdmin)
-                        <a href="{{ route($item['route']) }}"
-                           class="rounded-md px-3 py-2 transition {{ request()->routeIs($item['active']) ? 'bg-[#4b2673] text-white shadow-sm' : 'text-[#5f5968] hover:bg-[#f6f1e6] hover:text-[#4b2673]' }}">
-                            {{ $item['label'] }}
-                        </a>
-                    @endforeach
-                </nav>
-
                 <div class="hidden items-center gap-3 lg:flex">
-                    <div class="flex items-center gap-3 rounded-full border border-[#e5decc] bg-[#fbfaf7] py-1 pl-1 pr-4">
-                        <div class="h-10 w-10 overflow-hidden rounded-full bg-[#f6f1e6]">
+                    <div class="flex items-center gap-3 rounded-lg border border-[#e5decc] bg-[#fbfaf7] p-2">
+                        <div class="h-11 w-11 overflow-hidden rounded-full bg-[#f6f1e6]">
                             @if ($avatarUrl)
                                 <img src="{{ $avatarUrl }}" alt="{{ $user->name }}" class="h-full w-full object-cover">
                             @else
@@ -76,6 +64,7 @@
                             <p class="truncate text-sm font-extrabold text-[#241f2f]">{{ $user->name ?? 'Royalty User' }}</p>
                             <p class="text-xs font-semibold text-[#716a7c]">{{ $isAdmin ? 'Admin' : 'Member' }}</p>
                         </div>
+                        <a href="{{ route('profile.edit') }}" class="rounded-md border border-[#ded8c8] px-3 py-2 text-sm font-bold text-[#4b2673] hover:bg-[#f6f1e6]">Profile</a>
                     </div>
 
                     <form method="POST" action="{{ route('logout') }}">
@@ -94,7 +83,35 @@
                 </button>
             </div>
 
+            <nav class="hidden items-center justify-center gap-1 border-t border-[#eee8dc] py-3 text-sm font-bold lg:flex">
+                @foreach ($navItems as $item)
+                    @continue(($item['admin'] ?? false) && ! $isAdmin)
+                    @continue(($item['member'] ?? false) && $isAdmin)
+                    <a href="{{ route($item['route']) }}"
+                       class="rounded-md px-4 py-2 transition {{ request()->routeIs($item['active']) ? 'bg-[#4b2673] text-white shadow-sm' : 'text-[#5f5968] hover:bg-[#f6f1e6] hover:text-[#4b2673]' }}">
+                        {{ $item['label'] }}
+                    </a>
+                @endforeach
+            </nav>
+
             <div x-show="open" x-transition class="border-t border-[#eee8dc] py-4 lg:hidden">
+                <div class="mb-4 flex items-center gap-3 rounded-lg border border-[#e5decc] bg-[#fbfaf7] p-3">
+                    <div class="h-12 w-12 overflow-hidden rounded-full bg-[#f6f1e6]">
+                        @if ($avatarUrl)
+                            <img src="{{ $avatarUrl }}" alt="{{ $user->name }}" class="h-full w-full object-cover">
+                        @else
+                            <div class="flex h-full w-full items-center justify-center text-sm font-extrabold text-[#4b2673]">
+                                {{ strtoupper(substr($user->name ?? 'R', 0, 1)) }}
+                            </div>
+                        @endif
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-extrabold text-[#241f2f]">{{ $user->name ?? 'Royalty User' }}</p>
+                        <p class="text-xs font-semibold text-[#716a7c]">{{ $isAdmin ? 'Admin' : 'Member' }}</p>
+                    </div>
+                    <a href="{{ route('profile.edit') }}" class="rounded-md border border-[#ded8c8] px-3 py-2 text-sm font-bold text-[#4b2673]">Profile</a>
+                </div>
+
                 <nav class="grid gap-2 text-sm font-bold sm:grid-cols-2">
                     @foreach ($navItems as $item)
                         @continue(($item['admin'] ?? false) && ! $isAdmin)

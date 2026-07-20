@@ -21,12 +21,18 @@
         <div class="relative grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:p-10">
             <div class="flex min-h-[360px] flex-col justify-between">
                 <div>
-                    <p class="text-sm font-extrabold uppercase tracking-wide text-[#f1cc4b]">Royalty Sacco SaaS</p>
+                    <p class="text-sm font-extrabold uppercase tracking-wide text-[#f1cc4b]">Royalty Sacco</p>
                     <h1 class="mt-4 max-w-3xl text-4xl font-extrabold leading-tight sm:text-5xl">
-                        Grow savings, manage loans, and track every shilling from one portal.
+                        Empowering Destinies.
                     </h1>
-                    <p class="mt-4 max-w-2xl text-base leading-7 text-white/80">
-                        Welcome back, {{ $dashboardUser->name }}. Your dashboard is now a clean home base for savings, credit, wallet activity, and customer support.
+                    <p class="mt-3 max-w-2xl text-2xl font-bold leading-snug text-white/90 sm:text-3xl">
+                        Build Generational Wealth with us
+                    </p>
+                    <p class="mt-5 max-w-2xl text-base italic leading-7 text-white/80">
+                        "Cast your bread upon the waters, For you will find it after many days" - Ecc 11:1
+                    </p>
+                    <p class="mt-5 max-w-2xl text-sm leading-7 text-white/75">
+                        Welcome back, {{ $dashboardUser->name }}. Scroll through your Sacco home to preview wallet activity, loans, transactions, and support before opening each page from the menu.
                     </p>
                 </div>
 
@@ -216,6 +222,52 @@
             </a>
         </div>
     </div>
+
+    <section class="space-y-4">
+        <div>
+            <p class="text-sm font-bold uppercase text-[#947b2f]">Portal Overview</p>
+            <h2 class="mt-1 text-2xl font-extrabold text-[#241f2f]">Everything in your Sacco, one scroll away</h2>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <a href="{{ route('wallet.index') }}" class="rounded-lg border border-[#ded8c8] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#4b2673] hover:shadow-md">
+                <p class="text-sm font-extrabold text-[#4b2673]">Wallet</p>
+                <p class="mt-2 text-sm leading-6 text-[#716a7c]">View available funds, recent movements, deposits, and withdrawals from your member wallet.</p>
+            </a>
+
+            <a href="{{ route('loans.index') }}" class="rounded-lg border border-[#ded8c8] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#4b2673] hover:shadow-md">
+                <p class="text-sm font-extrabold text-[#4b2673]">Loans</p>
+                <p class="mt-2 text-sm leading-6 text-[#716a7c]">Apply for credit, monitor active loans, and follow repayment progress without leaving the portal.</p>
+            </a>
+
+            <a href="{{ route('transactions.index') }}" class="rounded-lg border border-[#ded8c8] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#4b2673] hover:shadow-md">
+                <p class="text-sm font-extrabold text-[#4b2673]">Transactions</p>
+                <p class="mt-2 text-sm leading-6 text-[#716a7c]">Track deposits, withdrawals, repayments, and posted activity for a clearer financial trail.</p>
+            </a>
+
+            <a href="{{ route('customer-care.create') }}" class="rounded-lg border border-[#ded8c8] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#4b2673] hover:shadow-md">
+                <p class="text-sm font-extrabold text-[#4b2673]">Customer Care</p>
+                <p class="mt-2 text-sm leading-6 text-[#716a7c]">Send questions or enquiries directly to the office and keep your request tied to your account.</p>
+            </a>
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-3">
+            <a href="{{ route('profile.edit') }}" class="rounded-lg border border-[#ded8c8] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#4b2673] hover:shadow-md">
+                <p class="text-sm font-extrabold text-[#4b2673]">Profile</p>
+                <p class="mt-2 text-sm leading-6 text-[#716a7c]">Keep your photo, phone number, location, next of kin, and member details updated.</p>
+            </a>
+
+            <div class="rounded-lg border border-[#ded8c8] bg-white p-5 shadow-sm">
+                <p class="text-sm font-extrabold text-[#4b2673]">Savings Growth</p>
+                <p class="mt-2 text-sm leading-6 text-[#716a7c]">Watch savings and loan exposure side by side as your Sacco journey grows.</p>
+            </div>
+
+            <div class="rounded-lg border border-[#ded8c8] bg-white p-5 shadow-sm">
+                <p class="text-sm font-extrabold text-[#4b2673]">Member Confidence</p>
+                <p class="mt-2 text-sm leading-6 text-[#716a7c]">Sensitive balances stay hidden until you choose to reveal them with the visibility toggle.</p>
+            </div>
+        </div>
+    </section>
 
 </div>
 @endsection

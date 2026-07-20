@@ -6,12 +6,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Account extends Model
 {
     use HasFactory;
 
     public const TYPES = [
+        'savings' => 'Savings',
+        'shares' => 'Shares',
+        'deposits' => 'Member Deposits',
+        'portfolio' => 'Saving Portfolio',
+    ];
+
+    public const STANDARD_TYPES = [
         'savings' => 'Savings',
         'shares' => 'Shares',
         'deposits' => 'Member Deposits',
@@ -42,6 +50,11 @@ class Account extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function savingPortfolio(): HasOne
+    {
+        return $this->hasOne(SavingPortfolio::class);
     }
 
     public function getTypeLabelAttribute(): string
