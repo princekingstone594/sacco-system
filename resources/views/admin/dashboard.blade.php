@@ -45,6 +45,7 @@
                 <a href="{{ route('accounts.index') }}" class="rounded-md bg-[#f6f1e6] px-4 py-3 text-sm font-bold text-[#4b2673] hover:bg-[#eee3cd]">Review Accounts</a>
                 <a href="{{ route('loans.index') }}" class="rounded-md bg-[#f6f1e6] px-4 py-3 text-sm font-bold text-[#4b2673] hover:bg-[#eee3cd]">Loan Pipeline</a>
                 <a href="{{ route('reports.index') }}" class="rounded-md bg-[#f6f1e6] px-4 py-3 text-sm font-bold text-[#4b2673] hover:bg-[#eee3cd]">Reports</a>
+                <a href="{{ route('admin.customer-care.index') }}" class="rounded-md bg-[#f6f1e6] px-4 py-3 text-sm font-bold text-[#4b2673] hover:bg-[#eee3cd]">Customer Enquiries</a>
             </div>
         </div>
 

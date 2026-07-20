@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{
     AccountController,
     DashboardController,
+    CustomerCareInquiryController,
     LoanController,
     LoanProductController,
     MemberController,
@@ -51,6 +52,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/wallet', [WalletController::class, 'index'])->name('wallet.index');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/customer-care', [CustomerCareInquiryController::class, 'create'])->name('customer-care.create');
+    Route::post('/customer-care', [CustomerCareInquiryController::class, 'store'])->name('customer-care.store');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -67,4 +70,8 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])
         ->name('admin.dashboard');
+
+    Route::get('/admin/customer-care', [CustomerCareInquiryController::class, 'index'])->name('admin.customer-care.index');
+    Route::get('/admin/customer-care/{inquiry}', [CustomerCareInquiryController::class, 'show'])->name('admin.customer-care.show');
+    Route::patch('/admin/customer-care/{inquiry}', [CustomerCareInquiryController::class, 'update'])->name('admin.customer-care.update');
 });

@@ -31,6 +31,8 @@
         ['label' => 'Loan Products', 'route' => 'loan-products.index', 'active' => 'loan-products.*', 'admin' => true],
         ['label' => 'Transactions', 'route' => 'transactions.index', 'active' => 'transactions.*'],
         ['label' => 'Reports', 'route' => 'reports.index', 'active' => 'reports.*', 'admin' => true],
+        ['label' => 'Customer Care', 'route' => 'customer-care.create', 'active' => 'customer-care.*', 'member' => true],
+        ['label' => 'Enquiries', 'route' => 'admin.customer-care.index', 'active' => 'admin.customer-care.*', 'admin' => true],
     ];
 @endphp
 
