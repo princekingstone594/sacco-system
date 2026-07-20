@@ -18,103 +18,116 @@
     @endif
 </head>
 
-<body class="bg-[#f6f4ef] font-sans text-[#241f2f] antialiased">
+<body class="bg-[#f7f4ed] font-sans text-[#241f2f] antialiased">
 @php
     $user = auth()->user();
     $isAdmin = (bool) optional($user)->is_admin;
+    $avatarUrl = optional($user)->profile_photo_path ? asset('storage/'.$user->profile_photo_path) : null;
     $navItems = [
-        ['label' => 'Overview', 'route' => $isAdmin ? 'admin.dashboard' : 'dashboard', 'active' => $isAdmin ? 'admin.dashboard' : 'dashboard'],
-        ['label' => 'Members', 'route' => 'members.index', 'active' => 'members.*', 'admin' => true],
-        ['label' => 'Accounts', 'route' => 'accounts.index', 'active' => 'accounts.*', 'admin' => true],
+        ['label' => 'Home', 'route' => $isAdmin ? 'admin.dashboard' : 'dashboard', 'active' => $isAdmin ? 'admin.dashboard' : 'dashboard'],
         ['label' => 'Wallet', 'route' => 'wallet.index', 'active' => 'wallet.*', 'member' => true],
         ['label' => 'Loans', 'route' => 'loans.index', 'active' => 'loans.*'],
-        ['label' => 'Loan Products', 'route' => 'loan-products.index', 'active' => 'loan-products.*', 'admin' => true],
         ['label' => 'Transactions', 'route' => 'transactions.index', 'active' => 'transactions.*'],
-        ['label' => 'Reports', 'route' => 'reports.index', 'active' => 'reports.*', 'admin' => true],
         ['label' => 'Customer Care', 'route' => 'customer-care.create', 'active' => 'customer-care.*', 'member' => true],
+        ['label' => 'Staff', 'route' => 'members.index', 'active' => 'members.*', 'admin' => true],
+        ['label' => 'Accounts', 'route' => 'accounts.index', 'active' => 'accounts.*', 'admin' => true],
+        ['label' => 'Products', 'route' => 'loan-products.index', 'active' => 'loan-products.*', 'admin' => true],
+        ['label' => 'Reports', 'route' => 'reports.index', 'active' => 'reports.*', 'admin' => true],
         ['label' => 'Enquiries', 'route' => 'admin.customer-care.index', 'active' => 'admin.customer-care.*', 'admin' => true],
+        ['label' => 'Profile', 'route' => 'profile.edit', 'active' => 'profile.*'],
     ];
 @endphp
 
-<div class="min-h-screen lg:flex">
-    <aside class="hidden w-72 shrink-0 border-r border-[#ded8c8] bg-white lg:flex lg:flex-col">
-        <a href="{{ route($isAdmin ? 'admin.dashboard' : 'dashboard') }}" class="flex items-center gap-3 border-b border-[#eee8dc] px-6 py-5">
-            <x-application-logo class="h-12 w-12 rounded-lg object-contain" />
-            <div>
-                <p class="text-sm font-extrabold uppercase text-[#4b2673]">Royalty Sacco</p>
-                <p class="text-xs font-medium text-[#947b2f]">Empowering Destinies</p>
-            </div>
-        </a>
-
-        <nav class="flex-1 space-y-1 px-4 py-5 text-sm font-semibold">
-            @foreach ($navItems as $item)
-                @continue(($item['admin'] ?? false) && ! $isAdmin)
-                @continue(($item['member'] ?? false) && $isAdmin)
-                <a href="{{ route($item['route']) }}"
-                   class="block rounded-md px-4 py-3 transition {{ request()->routeIs($item['active']) ? 'bg-[#4b2673] text-white shadow-sm' : 'text-[#5f5968] hover:bg-[#f6f1e6] hover:text-[#4b2673]' }}">
-                    {{ $item['label'] }}
+<div class="min-h-screen">
+    <header x-data="{ open: false }" class="sticky top-0 z-40 border-b border-[#e5decc] bg-white/90 shadow-sm backdrop-blur">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex h-20 items-center justify-between gap-4">
+                <a href="{{ route($isAdmin ? 'admin.dashboard' : 'dashboard') }}" class="flex min-w-0 items-center gap-3">
+                    <x-application-logo class="h-12 w-12 shrink-0 rounded-lg object-contain" />
+                    <div class="min-w-0">
+                        <p class="truncate text-sm font-extrabold uppercase tracking-wide text-[#4b2673]">Royalty Sacco</p>
+                        <p class="truncate text-xs font-semibold text-[#947b2f]">{{ $isAdmin ? 'SaaS admin console' : 'Member growth portal' }}</p>
+                    </div>
                 </a>
-            @endforeach
-        </nav>
 
-        <div class="border-t border-[#eee8dc] p-4">
-            <div class="mb-3 rounded-md bg-[#f8f6f1] p-3">
-                <p class="text-sm font-bold text-[#241f2f]">{{ $user->name ?? 'Royalty User' }}</p>
-                <p class="truncate text-xs text-[#716a7c]">{{ $user->email ?? '' }}</p>
+                <nav class="hidden items-center gap-1 text-sm font-bold lg:flex">
+                    @foreach ($navItems as $item)
+                        @continue(($item['admin'] ?? false) && ! $isAdmin)
+                        @continue(($item['member'] ?? false) && $isAdmin)
+                        <a href="{{ route($item['route']) }}"
+                           class="rounded-md px-3 py-2 transition {{ request()->routeIs($item['active']) ? 'bg-[#4b2673] text-white shadow-sm' : 'text-[#5f5968] hover:bg-[#f6f1e6] hover:text-[#4b2673]' }}">
+                            {{ $item['label'] }}
+                        </a>
+                    @endforeach
+                </nav>
+
+                <div class="hidden items-center gap-3 lg:flex">
+                    <div class="flex items-center gap-3 rounded-full border border-[#e5decc] bg-[#fbfaf7] py-1 pl-1 pr-4">
+                        <div class="h-10 w-10 overflow-hidden rounded-full bg-[#f6f1e6]">
+                            @if ($avatarUrl)
+                                <img src="{{ $avatarUrl }}" alt="{{ $user->name }}" class="h-full w-full object-cover">
+                            @else
+                                <div class="flex h-full w-full items-center justify-center text-sm font-extrabold text-[#4b2673]">
+                                    {{ strtoupper(substr($user->name ?? 'R', 0, 1)) }}
+                                </div>
+                            @endif
+                        </div>
+                        <div class="max-w-36">
+                            <p class="truncate text-sm font-extrabold text-[#241f2f]">{{ $user->name ?? 'Royalty User' }}</p>
+                            <p class="text-xs font-semibold text-[#716a7c]">{{ $isAdmin ? 'Admin' : 'Member' }}</p>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="rounded-md bg-[#241f2f] px-4 py-2 text-sm font-bold text-white hover:bg-[#3a314b]">Logout</button>
+                    </form>
+                </div>
+
+                <button type="button" @click="open = ! open" class="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#ded8c8] text-[#4b2673] lg:hidden">
+                    <svg x-show="! open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16" />
+                    </svg>
+                    <svg x-show="open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
-            <div class="grid grid-cols-2 gap-2 text-sm font-semibold">
-                <a href="{{ route('profile.edit') }}" class="rounded-md border border-[#ded8c8] px-3 py-2 text-center text-[#4b2673] hover:bg-[#f6f1e6]">Profile</a>
-                <form method="POST" action="{{ route('logout') }}">
+
+            <div x-show="open" x-transition class="border-t border-[#eee8dc] py-4 lg:hidden">
+                <nav class="grid gap-2 text-sm font-bold sm:grid-cols-2">
+                    @foreach ($navItems as $item)
+                        @continue(($item['admin'] ?? false) && ! $isAdmin)
+                        @continue(($item['member'] ?? false) && $isAdmin)
+                        <a href="{{ route($item['route']) }}"
+                           class="rounded-md px-3 py-2 {{ request()->routeIs($item['active']) ? 'bg-[#4b2673] text-white' : 'bg-[#f6f1e6] text-[#5f5968]' }}">
+                            {{ $item['label'] }}
+                        </a>
+                    @endforeach
+                </nav>
+                <form method="POST" action="{{ route('logout') }}" class="mt-3">
                     @csrf
-                    <button type="submit" class="w-full rounded-md bg-[#241f2f] px-3 py-2 text-white hover:bg-[#3a314b]">Logout</button>
+                    <button type="submit" class="w-full rounded-md bg-[#241f2f] px-4 py-2 text-sm font-bold text-white">Logout</button>
                 </form>
             </div>
         </div>
-    </aside>
+    </header>
 
-    <div class="min-w-0 flex-1">
-        <header class="border-b border-[#ded8c8] bg-white/95 px-4 py-4 backdrop-blur lg:hidden">
-            <div class="flex items-center justify-between gap-3">
-                <a href="{{ route($isAdmin ? 'admin.dashboard' : 'dashboard') }}" class="flex items-center gap-3">
-                    <x-application-logo class="h-11 w-11 rounded-lg object-contain" />
-                    <div>
-                        <p class="text-sm font-extrabold uppercase text-[#4b2673]">Royalty Sacco</p>
-                        <p class="text-xs text-[#947b2f]">{{ $isAdmin ? 'Admin workspace' : 'Member portal' }}</p>
-                    </div>
-                </a>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="rounded-md bg-[#241f2f] px-3 py-2 text-sm font-semibold text-white">Logout</button>
-                </form>
+    @isset($header)
+        <section class="border-b border-[#ded8c8] bg-white px-4 py-5 sm:px-6 lg:px-8">
+            <div class="mx-auto max-w-7xl">
+                {{ $header }}
             </div>
-            <nav class="mt-4 flex gap-2 overflow-x-auto pb-1 text-sm font-semibold">
-                @foreach ($navItems as $item)
-                    @continue(($item['admin'] ?? false) && ! $isAdmin)
-                    @continue(($item['member'] ?? false) && $isAdmin)
-                    <a href="{{ route($item['route']) }}"
-                       class="shrink-0 rounded-md px-3 py-2 {{ request()->routeIs($item['active']) ? 'bg-[#4b2673] text-white' : 'bg-[#f6f1e6] text-[#5f5968]' }}">
-                        {{ $item['label'] }}
-                    </a>
-                @endforeach
-            </nav>
-        </header>
+        </section>
+    @endisset
 
-        @isset($header)
-            <div class="border-b border-[#ded8c8] bg-white px-6 py-5">
-                <div class="mx-auto max-w-7xl">
-                    {{ $header }}
-                </div>
-            </div>
-        @endisset
-
-        <main class="mx-auto min-h-screen max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-            @hasSection('content')
-                @yield('content')
-            @else
-                {{ $slot ?? '' }}
-            @endif
-        </main>
-    </div>
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        @hasSection('content')
+            @yield('content')
+        @else
+            {{ $slot ?? '' }}
+        @endif
+    </main>
 </div>
 </body>
 </html>
