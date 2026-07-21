@@ -10,6 +10,7 @@ use App\Http\Controllers\{
     LoanProductController,
     MemberController,
     ProfileController,
+    SavingPortfolioController,
     TransactionController,
     ReportController,
     WalletController
@@ -25,6 +26,19 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/download/apk', function () {
+    $filename = config('sacco.apk_filename', 'royalty-sacco.apk');
+    $path = public_path($filename);
+
+    if (! file_exists($path)) {
+        abort(404, 'The mobile app is not available for download yet.');
+    }
+
+    return response()->download($path, $filename, [
+        'Content-Type' => 'application/vnd.android.package-archive',
+    ]);
+})->name('apk.download');
 
 /*
 |--------------------------------------------------------------------------
@@ -50,6 +64,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('transactions', TransactionController::class);
 
     Route::get('/wallet', [WalletController::class, 'index'])->name('wallet.index');
+    Route::post('/saving-portfolios', [SavingPortfolioController::class, 'store'])->name('saving-portfolios.store');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/customer-care', [CustomerCareInquiryController::class, 'create'])->name('customer-care.create');

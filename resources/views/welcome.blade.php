@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,7 +15,7 @@
         <script src="https://cdn.tailwindcss.com"></script>
     @endif
 </head>
-<body class="bg-[#f8f6f1] font-sans text-[#241f2f] antialiased">
+<body class="flex min-h-screen flex-col bg-[#f8f6f1] font-sans text-[#241f2f] antialiased">
     <header class="sticky top-0 z-30 border-b border-[#ded8c8] bg-white/95 backdrop-blur">
         <nav class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <a href="#home" class="flex min-w-0 items-center gap-3">
@@ -48,7 +48,7 @@
         </nav>
     </header>
 
-    <main id="home">
+    <main id="home" class="flex-1">
         <section class="relative min-h-[88vh] overflow-hidden bg-[#241f2f] text-white">
             <img
                 src="https://images.unsplash.com/photo-1560439514-4e9645039924?auto=format&fit=crop&w=1800&q=80"
@@ -203,5 +203,8 @@
             </div>
         </section>
     </main>
+
+    <x-site-footer />
+    <x-apk-download-button />
 </body>
 </html>

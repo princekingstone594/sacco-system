@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -25,6 +25,9 @@
     $avatarUrl = optional($user)->profile_photo_path ? asset('storage/'.$user->profile_photo_path) : null;
     $navItems = [
         ['label' => 'Home', 'route' => $isAdmin ? 'admin.dashboard' : 'dashboard', 'active' => $isAdmin ? 'admin.dashboard' : 'dashboard'],
+        ['label' => 'About Us', 'anchor' => 'about-us', 'scroll' => true, 'member' => true],
+        ['label' => 'Why Royalty Sacco', 'anchor' => 'why-royalty-sacco', 'scroll' => true, 'member' => true],
+        ['label' => 'Our Products', 'anchor' => 'our-products', 'scroll' => true, 'member' => true],
         ['label' => 'Wallet', 'route' => 'wallet.index', 'active' => 'wallet.*', 'member' => true],
         ['label' => 'Loans', 'route' => 'loans.index', 'active' => 'loans.*'],
         ['label' => 'Transactions', 'route' => 'transactions.index', 'active' => 'transactions.*'],
@@ -35,9 +38,10 @@
         ['label' => 'Reports', 'route' => 'reports.index', 'active' => 'reports.*', 'admin' => true],
         ['label' => 'Enquiries', 'route' => 'admin.customer-care.index', 'active' => 'admin.customer-care.*', 'admin' => true],
     ];
+    $dashboardUrl = route('dashboard');
 @endphp
 
-<div class="min-h-screen">
+<div class="flex min-h-screen flex-col">
     <header x-data="{ open: false }" class="sticky top-0 z-40 border-b border-[#e5decc] bg-white/90 shadow-sm backdrop-blur">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="flex min-h-20 items-center justify-between gap-4 py-3">
@@ -87,8 +91,16 @@
                 @foreach ($navItems as $item)
                     @continue(($item['admin'] ?? false) && ! $isAdmin)
                     @continue(($item['member'] ?? false) && $isAdmin)
-                    <a href="{{ route($item['route']) }}"
-                       class="rounded-md px-4 py-2 transition {{ request()->routeIs($item['active']) ? 'bg-[#4b2673] text-white shadow-sm' : 'text-[#5f5968] hover:bg-[#f6f1e6] hover:text-[#4b2673]' }}">
+                    @php
+                        $href = ($item['scroll'] ?? false)
+                            ? (request()->routeIs('dashboard') ? '#'.$item['anchor'] : $dashboardUrl.'#'.$item['anchor'])
+                            : route($item['route']);
+                        $isActive = ($item['scroll'] ?? false)
+                            ? false
+                            : request()->routeIs($item['active']);
+                    @endphp
+                    <a href="{{ $href }}"
+                       class="rounded-md px-4 py-2 transition {{ $isActive ? 'bg-[#4b2673] text-white shadow-sm' : 'text-[#5f5968] hover:bg-[#f6f1e6] hover:text-[#4b2673]' }}">
                         {{ $item['label'] }}
                     </a>
                 @endforeach
@@ -116,8 +128,16 @@
                     @foreach ($navItems as $item)
                         @continue(($item['admin'] ?? false) && ! $isAdmin)
                         @continue(($item['member'] ?? false) && $isAdmin)
-                        <a href="{{ route($item['route']) }}"
-                           class="rounded-md px-3 py-2 {{ request()->routeIs($item['active']) ? 'bg-[#4b2673] text-white' : 'bg-[#f6f1e6] text-[#5f5968]' }}">
+                        @php
+                            $href = ($item['scroll'] ?? false)
+                                ? (request()->routeIs('dashboard') ? '#'.$item['anchor'] : $dashboardUrl.'#'.$item['anchor'])
+                                : route($item['route']);
+                            $isActive = ($item['scroll'] ?? false)
+                                ? false
+                                : request()->routeIs($item['active']);
+                        @endphp
+                        <a href="{{ $href }}"
+                           class="rounded-md px-3 py-2 {{ $isActive ? 'bg-[#4b2673] text-white' : 'bg-[#f6f1e6] text-[#5f5968]' }}">
                             {{ $item['label'] }}
                         </a>
                     @endforeach
@@ -138,13 +158,16 @@
         </section>
     @endisset
 
-    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
         @hasSection('content')
             @yield('content')
         @else
             {{ $slot ?? '' }}
         @endif
     </main>
+
+    <x-site-footer />
+    <x-apk-download-button />
 </div>
 </body>
 </html>

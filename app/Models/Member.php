@@ -71,6 +71,14 @@ class Member extends Model
     }
 
     /**
+     * Goal-based saving portfolios
+     */
+    public function savingPortfolios(): HasMany
+    {
+        return $this->hasMany(SavingPortfolio::class);
+    }
+
+    /**
      * Accessor: Full Name
      */
     public function getFullNameAttribute(): string

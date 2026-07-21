@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
-use App\Models\Transaction;
 use App\Models\Loan;
+use App\Models\SavingPortfolio;
+use App\Models\Transaction;
 
 class DashboardController extends Controller
 {
@@ -36,6 +37,7 @@ class DashboardController extends Controller
                 'transactions' => collect(),
                 'loans' => collect(),
                 'monthlyTransactions' => [],
+                'portfolios' => collect(),
             ]);
         }
 
@@ -110,6 +112,16 @@ class DashboardController extends Controller
 
         /*
         |-------------------------------
+        | 📁 SAVING PORTFOLIOS
+        |-------------------------------
+        */
+        $portfolios = SavingPortfolio::with('account')
+            ->where('member_id', $member->id)
+            ->latest()
+            ->get();
+
+        /*
+        |-------------------------------
         | 🚀 RETURN VIEW
         |-------------------------------
         */
@@ -124,6 +136,7 @@ class DashboardController extends Controller
             'transactions' => $transactions,
             'loans' => $loans,
             'monthlyTransactions' => $monthlyTransactions,
+            'portfolios' => $portfolios,
         ]);
     }
 }
